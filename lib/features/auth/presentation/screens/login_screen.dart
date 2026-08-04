@@ -1,24 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../business/presentation/screens/business_dashboard_screen.dart';
+import '../../../offers/presentation/screens/home_screen.dart';
+import '../../domain/enums/user_role.dart';
+import '../controllers/auth_controller.dart';
 import 'register_screen.dart';
 import 'role_selection_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   String? _emailError;
   String? _passwordError;
   bool _obscurePassword = true;
-  bool _isLoading = false;
 
   void _validateFields() {
     setState(() {
@@ -28,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (email.isEmpty) {
         _emailError = 'E-posta adresi boş bırakılamaz';
       } else if (!email.contains('@')) {
-        _emailError = 'Geçerli bir e-posta adresi giriniz (örn. name@domain.com)';
+        _emailError = 'Geçerli bir e-posta adresi giriniz';
       } else {
         _emailError = null;
       }
@@ -50,22 +55,34 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    final ok = await ref.read(authControllerProvider.notifier).signIn(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
 
-    // Mock network delay (1.5s)
-    await Future.delayed(const Duration(milliseconds: 1500));
+    if (!mounted || !ok) return;
 
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-      // Navigate to RoleSelectionScreen (the most important screen) to choose a role
-      Navigator.of(context).push(
+    // Giris basarili: profili cek, role gore yonlendir.
+    final profile = await ref.read(authRepositoryProvider).fetchProfile();
+
+    if (!mounted) return;
+
+    // Profil yoksa rol secimine gonder (kenar durum).
+    if (profile == null) {
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
       );
+      return;
     }
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => profile.role == UserRole.business
+            ? const BusinessDashboardScreen()
+            : const HomeScreen(),
+      ),
+      (route) => false,
+    );
   }
 
   @override
@@ -78,6 +95,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final authState = ref.watch(authControllerProvider);
+    final isMuted = theme.brightness == Brightness.light
+        ? AppColors.textMutedLight
+        : AppColors.textMutedDark;
 
     return Scaffold(
       body: SafeArea(
@@ -86,15 +107,12 @@ class _LoginScreenState extends State<LoginScreen> {
             return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: AppSpacing.xl),
-                    // Welcome Header
                     Text(
                       'Tekrar hoş geldin',
                       style: theme.textTheme.headlineLarge?.copyWith(
@@ -105,23 +123,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       'Hesabına giriş yap ve gıda israfını önlemeye devam et.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.brightness == Brightness.light
-                            ? AppColors.textMutedLight
-                            : AppColors.textMutedDark,
-                      ),
+                      style:
+                          theme.textTheme.bodyMedium?.copyWith(color: isMuted),
                     ),
                     const SizedBox(height: AppSpacing.xxl),
 
-                    // Email Field
+                    // E-posta
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'E-posta Adresi',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: theme.textTheme.labelMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         TextField(
@@ -133,6 +147,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             errorText: _emailError,
                           ),
                           onChanged: (_) {
+                            if (authState.errorMessage != null) {
+                              ref
+                                  .read(authControllerProvider.notifier)
+                                  .clearError();
+                            }
                             if (_emailError != null) _validateFields();
                           },
                         ),
@@ -140,15 +159,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
 
-                    // Password Field
+                    // Sifre
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Şifre',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: theme.textTheme.labelMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         TextField(
@@ -172,6 +190,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           onChanged: (_) {
+                            if (authState.errorMessage != null) {
+                              ref
+                                  .read(authControllerProvider.notifier)
+                                  .clearError();
+                            }
                             if (_passwordError != null) _validateFields();
                           },
                         ),
@@ -179,15 +202,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
 
-                    // Forgot Password Text Button
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          // Mock forgot password action
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Şifre sıfırlama e-postası gönderildi (Mock)'),
+                              content: Text('Şifre sıfırlama yakında eklenecek'),
                               duration: Duration(seconds: 2),
                             ),
                           );
@@ -203,35 +224,65 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    // Login Button with Loading Indicator
+                    // Sunucudan gelen hata
+                    if (authState.errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.10),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusMd),
+                          border: Border.all(
+                            color: AppColors.error.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                authState.errorMessage!,
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(color: AppColors.error),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+
                     FilledButton(
-                      onPressed: _isLoading ? null : _handleLogin,
-                      child: _isLoading
+                      onPressed: authState.isLoading ? null : _handleLogin,
+                      child: authState.isLoading
                           ? const SizedBox(
                               height: 24,
                               width: 24,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.5,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
                           : const Text('Giriş Yap'),
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
-                    // Or divider
                     Row(
                       children: [
                         const Expanded(child: Divider()),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md),
                           child: Text(
                             'veya',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.brightness == Brightness.light
-                                  ? AppColors.textMutedLight
-                                  : AppColors.textMutedDark,
-                            ),
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(color: isMuted),
                           ),
                         ),
                         const Expanded(child: Divider()),
@@ -239,22 +290,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
-                    // Register link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           'Hesabın yok mu? ',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.brightness == Brightness.light
-                                ? AppColors.textMutedLight
-                                : AppColors.textMutedDark,
-                          ),
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: isMuted),
                         ),
                         GestureDetector(
                           onTap: () {
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterScreen(),
+                              ),
                             );
                           },
                           child: Text(

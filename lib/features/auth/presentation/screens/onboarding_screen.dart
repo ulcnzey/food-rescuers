@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import 'login_screen.dart';
@@ -17,7 +19,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<OnboardingData> _pages = [
     OnboardingData(
       title: 'Yemekler çöpe gitmesin',
-      subtitle: 'Yakınındaki işletmeler gün sonunda ellerinde kalan taze ve lezzetli fazla gıdaları listeler.',
+      subtitle:
+          'Yakınındaki işletmeler gün sonunda ellerinde kalan taze ve lezzetli fazla gıdaları listeler.',
       icon: Icons.storefront_rounded,
       gradientColors: [AppColors.primary, AppColors.primaryDark],
       illustrationBuilder: (isActive) {
@@ -81,7 +84,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     color: AppColors.secondary,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.eco_rounded, color: Colors.white, size: 24),
+                  child: const Icon(
+                    Icons.eco_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
               ),
             )
@@ -91,9 +98,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     OnboardingData(
       title: 'Uygun fiyata, hatta ücretsiz',
-      subtitle: 'Sürpriz paketleri çok uygun fiyatlarla, hatta bazen tamamen ücretsiz olarak tek dokunuşla rezerve et.',
+      subtitle:
+          'Sürpriz paketleri çok uygun fiyatlarla, hatta bazen tamamen ücretsiz olarak tek dokunuşla rezerve et.',
       icon: Icons.touch_app_rounded,
-      gradientColors: [AppColors.secondary, Color(0xFFD48220)],
+      gradientColors: [AppColors.secondary, const Color(0xFFD48220)],
       illustrationBuilder: (isActive) {
         return Stack(
           alignment: Alignment.center,
@@ -139,14 +147,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 scale: isActive ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 650),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppColors.success,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusPill),
                   ),
                   child: const Text(
                     '₺0 (Bedava!)',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ),
@@ -157,7 +171,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     OnboardingData(
       title: 'Git, QR kodunu göster, al',
-      subtitle: 'Belirlenen saat aralığında işletmeye git, uygulamadaki QR kodunu göster, ödemeni yap ve paketini teslim al.',
+      subtitle:
+          'Belirlenen saat aralığında işletmeye git, uygulamadaki QR kodunu göster, ödemeni yap ve paketini teslim al.',
       icon: Icons.qr_code_scanner_rounded,
       gradientColors: [AppColors.primary, AppColors.success],
       illustrationBuilder: (isActive) {
@@ -174,7 +189,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [AppColors.primaryLight, AppColors.success.withValues(alpha: 0.7)],
+                    colors: [
+                      AppColors.primaryLight,
+                      AppColors.success.withValues(alpha: 0.7),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -191,7 +209,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusLg),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.1),
@@ -220,7 +239,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     color: AppColors.success,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check_rounded, color: Colors.white, size: 20),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             )
@@ -230,7 +253,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
-  void _finishOnboarding() {
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  /// Tanitim tamamlandi bilgisini kaydeder, boylece ikinci acilista
+  /// kullanici dogrudan giris ekranina gider.
+  Future<void> _finishOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_seen', true);
+
+    if (!mounted) return;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
     );
@@ -273,11 +309,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   final page = _pages[index];
                   final isActive = _currentPage == index;
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                    ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Dynamic vector illustration container
                         SizedBox(
                           height: 240,
                           child: Center(
@@ -314,7 +351,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 children: [
-                  // Animated Dot Indicator
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
@@ -336,7 +372,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
-                  // Forward / Get Started Button
                   FilledButton(
                     onPressed: () {
                       if (isLastPage) {
