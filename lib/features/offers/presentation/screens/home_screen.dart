@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
-import '../../../../core/branding/app_logo.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../auth/presentation/screens/login_screen.dart';
 import '../../domain/entities/offer.dart';
 import '../widgets/food_type_style.dart';
 import '../widgets/offer_card.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   FoodType? _selected;
 
-  // GECICI: Supabase baglanana kadar sahte veri
+  // GECICI: Supabase'den gercek ilanlar cekilene kadar ornek veri.
   late final List<Offer> _all = [
     Offer(
       id: '1',
@@ -56,8 +59,21 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   ];
 
-  List<Offer> get _visible =>
-      _selected == null ? _all : _all.where((o) => o.foodType == _selected).toList();
+  List<Offer> get _visible => _selected == null
+      ? _all
+      : _all.where((o) => o.foodType == _selected).toList();
+
+  /// GECICI: test icin. Profil ekrani yazilinca oraya tasinacak.
+  Future<void> _signOut() async {
+    await ref.read(authControllerProvider.notifier).signOut();
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +83,9 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _Header(theme: theme)),
+            SliverToBoxAdapter(
+              child: _Header(theme: theme, onSignOut: _signOut),
+            ),
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
             const SliverToBoxAdapter(child: _ImpactCard()),
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
@@ -104,7 +122,11 @@ class _HomeScreenState extends State<HomeScreen> {
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md, 0, AppSpacing.md, AppSpacing.xxl),
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.xxl,
+              ),
               sliver: SliverList.separated(
                 itemCount: _visible.length,
                 separatorBuilder: (_, _) =>
@@ -120,19 +142,22 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.theme});
+  const _Header({required this.theme, required this.onSignOut});
 
   final ThemeData theme;
+  final VoidCallback onSignOut;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        0,
+      ),
       child: Row(
         children: [
-          const AppLogoMark(size: 28, monochrome: true),
-          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,8 +171,11 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    const Icon(Icons.place_rounded,
-                        size: 18, color: AppColors.primary),
+                    const Icon(
+                      Icons.place_rounded,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Elazığ, Merkez',
@@ -160,6 +188,12 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
+          IconButton(
+            onPressed: onSignOut,
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Çıkış yap',
+          ),
+          const SizedBox(width: AppSpacing.sm),
           IconButton.filledTonal(
             onPressed: () {},
             icon: const Icon(Icons.notifications_none_rounded),
@@ -196,8 +230,11 @@ class _ImpactCard extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.18),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.volunteer_activism_rounded,
-                  color: Colors.white, size: 22),
+              child: const Icon(
+                Icons.volunteer_activism_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             const Expanded(
@@ -316,9 +353,13 @@ class _Chip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon,
-                    size: 16,
-                    color: active ? Colors.white : theme.colorScheme.onSurfaceVariant),
+                Icon(
+                  icon,
+                  size: 16,
+                  color: active
+                      ? Colors.white
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   label,

@@ -1,88 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../domain/enums/user_role.dart';
+import '../../../business/presentation/screens/business_dashboard_screen.dart';
 import '../../../offers/presentation/screens/home_screen.dart';
+import '../../domain/enums/user_role.dart';
+import '../controllers/auth_controller.dart';
 
-// Riverpod Provider to store selected role.
-final selectedRoleProvider = StateProvider<UserRole?>((ref) => null);
-
-class RoleSelectionScreen extends ConsumerWidget {
+class RoleSelectionScreen extends ConsumerStatefulWidget {
   const RoleSelectionScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RoleSelectionScreen> createState() =>
+      _RoleSelectionScreenState();
+}
+
+class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
+  UserRole? _selectedRole;
+
+  void _select(UserRole role) {
+    setState(() => _selectedRole = role);
+  }
+
+  Future<void> _continue() async {
+    final role = _selectedRole;
+    if (role == null) return;
+
+    // Rolu veritabanindaki profiles kaydina yazar.
+    final ok = await ref.read(authControllerProvider.notifier).selectRole(role);
+
+    if (!mounted || !ok) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => role == UserRole.business
+            ? const BusinessDashboardScreen()
+            : const HomeScreen(),
+      ),
+      (route) => false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final selectedRole = ref.watch(selectedRoleProvider);
-
-    void onRoleSelect(UserRole role) {
-      ref.read(selectedRoleProvider.notifier).state = role;
-    }
-
-    void onContinue() {
-      if (selectedRole == null) return;
-
-      if (selectedRole == UserRole.consumer) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
-      } else {
-        // Business placeholder panel
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => Scaffold(
-              appBar: AppBar(
-                title: const Text('İşletme Paneli'),
-                leading: IconButton(
-                  icon: const Icon(Icons.logout_rounded),
-                  onPressed: () {
-                    // Reset role and go back to login for demo flow convenience
-                    ref.read(selectedRoleProvider.notifier).state = null;
-                    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-                  },
-                ),
-              ),
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.storefront_rounded,
-                        size: 80,
-                        color: AppColors.secondary,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Text(
-                        'İşletme Paneli — yakında',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Ürünlerinizi ekleyebileceğiniz ve siparişleri yönetebileceğiniz panel çok yakında burada olacak.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.brightness == Brightness.light
-                              ? AppColors.textMutedLight
-                              : AppColors.textMutedDark,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          (route) => false,
-        );
-      }
-    }
+    final authState = ref.watch(authControllerProvider);
+    final isMuted = theme.brightness == Brightness.light
+        ? AppColors.textMutedLight
+        : AppColors.textMutedDark;
 
     return Scaffold(
       appBar: AppBar(
@@ -108,25 +74,21 @@ class RoleSelectionScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 'Sana en uygun deneyimi sunabilmemiz için bir rol seç.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.brightness == Brightness.light
-                      ? AppColors.textMutedLight
-                      : AppColors.textMutedDark,
-                ),
+                style: theme.textTheme.bodyMedium?.copyWith(color: isMuted),
               ),
               const SizedBox(height: AppSpacing.xl),
 
-              // Vertically stacked cards
               Expanded(
                 child: ListView(
                   children: [
                     _RoleCard(
                       title: 'Bireysel Kullanıcı',
-                      description: 'Yakınındaki fırsatları keşfet, rezerve et, kurtar.',
+                      description:
+                          'Yakınındaki fırsatları keşfet, rezerve et, kurtar.',
                       icon: Icons.shopping_bag_outlined,
                       iconColor: AppColors.primary,
-                      isSelected: selectedRole == UserRole.consumer,
-                      onTap: () => onRoleSelect(UserRole.consumer),
+                      isSelected: _selectedRole == UserRole.consumer,
+                      onTap: () => _select(UserRole.consumer),
                       bullets: const [
                         'Taze ve uygun fiyatlı gıdalara ulaş',
                         'Tek tuşla kolay rezervasyon',
@@ -136,11 +98,12 @@ class RoleSelectionScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.lg),
                     _RoleCard(
                       title: 'İşletme',
-                      description: 'Elindeki fazlalığı israf etme, satışa veya bağışa çıkar.',
+                      description:
+                          'Elindeki fazlalığı israf etme, satışa veya bağışa çıkar.',
                       icon: Icons.storefront_rounded,
                       iconColor: AppColors.secondary,
-                      isSelected: selectedRole == UserRole.business,
-                      onTap: () => onRoleSelect(UserRole.business),
+                      isSelected: _selectedRole == UserRole.business,
+                      onTap: () => _select(UserRole.business),
                       bullets: const [
                         'Fazla stokları kolayca gelire dönüştür',
                         'Yeni yerel müşterilere ulaş',
@@ -151,25 +114,63 @@ class RoleSelectionScreen extends ConsumerWidget {
                 ),
               ),
 
-              // Bottom note and continue button
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (authState.errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.10),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusMd),
+                          border: Border.all(
+                            color: AppColors.error.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                authState.errorMessage!,
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(color: AppColors.error),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
                     Text(
                       'Bu seçimi daha sonra profilinden değiştirebilirsin.',
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.brightness == Brightness.light
-                            ? AppColors.textMutedLight
-                            : AppColors.textMutedDark,
-                      ),
+                      style:
+                          theme.textTheme.bodySmall?.copyWith(color: isMuted),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     FilledButton(
-                      onPressed: selectedRole != null ? onContinue : null,
-                      child: const Text('Devam Et'),
+                      onPressed: (_selectedRole != null && !authState.isLoading)
+                          ? _continue
+                          : null,
+                      child: authState.isLoading
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Devam Et'),
                     ),
                   ],
                 ),
@@ -257,11 +258,13 @@ class _RoleCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: AppSpacing.md),
-                        Text(
-                          title,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5,
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
+                            ),
                           ),
                         ),
                       ],
@@ -285,7 +288,9 @@ class _RoleCard extends StatelessWidget {
                           children: [
                             Icon(
                               Icons.check_circle_outline_rounded,
-                              color: isSelected ? AppColors.primary : iconColor.withValues(alpha: 0.7),
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : iconColor.withValues(alpha: 0.7),
                               size: 18,
                             ),
                             const SizedBox(width: AppSpacing.sm),
@@ -293,7 +298,9 @@ class _RoleCard extends StatelessWidget {
                               child: Text(
                                 bullet,
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w500
+                                      : FontWeight.normal,
                                 ),
                               ),
                             ),
