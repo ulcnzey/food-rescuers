@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../business/presentation/screens/business_dashboard_screen.dart';
+import '../../../business/presentation/screens/business_setup_screen.dart';
 import '../../../offers/presentation/screens/home_screen.dart';
 import '../../domain/enums/user_role.dart';
 import '../controllers/auth_controller.dart';
@@ -35,7 +35,7 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (_) => role == UserRole.business
-            ? const BusinessDashboardScreen()
+            ? const BusinessSetupScreen()
             : const HomeScreen(),
       ),
       (route) => false,
