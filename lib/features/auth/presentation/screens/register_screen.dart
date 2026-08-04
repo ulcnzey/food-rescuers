@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../legal/presentation/widgets/consent_checkbox.dart';
+import '../controllers/auth_controller.dart';
 import 'role_selection_screen.dart';
 
 enum PasswordStrength { none, weak, medium, strong }
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -91,7 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
   }
 
-  void _handleRegister() {
+  Future<void> _handleRegister() async {
     _validateFields();
 
     if (_fullNameError != null ||
@@ -102,9 +105,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
-    );
+    final ok = await ref.read(authControllerProvider.notifier).signUp(
+          email: _emailController.text,
+          password: _passwordController.text,
+          fullName: _fullNameController.text,
+        );
+
+    if (!mounted) return;
+
+    if (ok) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+      );
+    }
   }
 
   Widget _buildStrengthIndicator() {
@@ -183,6 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final authState = ref.watch(authControllerProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -222,7 +236,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
-                    // Full Name Field
+                    // Ad Soyad
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -236,7 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         TextField(
                           controller: _fullNameController,
                           decoration: InputDecoration(
-                            hintText: 'John Doe',
+                            hintText: 'Adınız Soyadınız',
                             prefixIcon: const Icon(Icons.person_outline_rounded),
                             errorText: _fullNameError,
                           ),
@@ -248,7 +262,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
 
-                    // Email Field
+                    // E-posta
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -275,7 +289,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
 
-                    // Password Field
+                    // Şifre
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -316,7 +330,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
 
-                    // Confirm Password Field
+                    // Şifre Tekrarı
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -342,13 +356,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               onPressed: () {
                                 setState(() {
-                                  _obscureConfirmPassword = !_obscureConfirmPassword;
+                                  _obscureConfirmPassword =
+                                      !_obscureConfirmPassword;
                                 });
                               },
                             ),
                           ),
                           onChanged: (_) {
-                            if (_confirmPasswordError != null) _validateFields();
+                            if (_confirmPasswordError != null) {
+                              _validateFields();
+                            }
                           },
                         ),
                       ],
@@ -365,10 +382,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
 
-                    // Submit Button (Disabled unless T&C checked)
+                    // Sunucudan gelen hata
+                    if (authState.errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.10),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusMd),
+                          border: Border.all(
+                            color: AppColors.error.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                authState.errorMessage!,
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(color: AppColors.error),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+
                     FilledButton(
-                      onPressed: _termsAccepted ? _handleRegister : null,
-                      child: const Text('Kayıt Ol'),
+                      onPressed: (_termsAccepted && !authState.isLoading)
+                          ? _handleRegister
+                          : null,
+                      child: authState.isLoading
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Kayıt Ol'),
                     ),
                     const SizedBox(height: AppSpacing.xl),
                   ],
