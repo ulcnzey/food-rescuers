@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../offers/presentation/screens/home_screen.dart';
+import '../../../shell/presentation/screens/main_shell.dart';
 import '../controllers/auth_controller.dart';
 import 'register_screen.dart';
 
@@ -62,7 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     // Rol ayrimi kaldirildi; herkes ayni ana ekrana gider.
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      MaterialPageRoute(builder: (_) => const MainShell()),
       (route) => false,
     );
   }

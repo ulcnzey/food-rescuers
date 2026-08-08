@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../legal/presentation/widgets/consent_checkbox.dart';
-import '../../../offers/presentation/screens/home_screen.dart';
+import '../../../shell/presentation/screens/main_shell.dart';
 import '../controllers/auth_controller.dart';
 
 enum PasswordStrength { none, weak, medium, strong }
@@ -117,7 +117,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     // Rol secimi kaldirildi; herkes ayni ana ekranla basliyor.
     // Ilan verme yetenegi profilden aciliyor.
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      MaterialPageRoute(builder: (_) => const MainShell()),
       (route) => false,
     );
   }

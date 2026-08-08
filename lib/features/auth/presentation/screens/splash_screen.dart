@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/branding/app_logo.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../offers/presentation/screens/home_screen.dart';
+import '../../../shell/presentation/screens/main_shell.dart';
 import '../controllers/auth_controller.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
@@ -67,7 +67,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
       // Oturum var -> herkes ayni ana ekrana gider.
       // Rol ayrimi kaldirildi; ilan verme yetenegi profilden aciliyor.
-      _go(const HomeScreen());
+      _go(const MainShell());
     } catch (_) {
       await minimumWait;
       if (!mounted) return;

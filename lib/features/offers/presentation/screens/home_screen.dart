@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
-import '../../../auth/presentation/screens/login_screen.dart';
 import '../../domain/entities/offer.dart';
 import '../widgets/food_type_style.dart';
 import '../widgets/offer_card.dart';
@@ -63,42 +61,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ? _all
       : _all.where((o) => o.foodType == _selected).toList();
 
-  /// GECICI: test icin. Profil ekrani yazilinca oraya tasinacak.
-  Future<void> _signOut() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.logout_rounded, color: AppColors.error),
-        title: const Text('Çıkış yapmak istiyor musun?'),
-        content: const Text(
-          'Hesabından çıkacaksın. Tekrar giriş yapman gerekecek.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Vazgeç'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Çıkış Yap'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-
-    await ref.read(authControllerProvider.notifier).signOut();
-
-    if (!mounted) return;
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -107,9 +69,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(
-              child: _Header(theme: theme, onSignOut: _signOut),
-            ),
+            SliverToBoxAdapter(child: _Header(theme: theme)),
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
             const SliverToBoxAdapter(child: _ImpactCard()),
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
@@ -166,10 +126,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.theme, required this.onSignOut});
+  const _Header({required this.theme});
 
   final ThemeData theme;
-  final VoidCallback onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -212,12 +171,6 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            onPressed: onSignOut,
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Çıkış yap',
-          ),
-          const SizedBox(width: AppSpacing.sm),
           IconButton.filledTonal(
             onPressed: () {},
             icon: const Icon(Icons.notifications_none_rounded),
