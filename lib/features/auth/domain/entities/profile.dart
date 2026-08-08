@@ -5,17 +5,23 @@ class Profile {
     required this.id,
     required this.fullName,
     required this.role,
+    this.canSell = false,
     this.phone,
     this.avatarUrl,
   });
 
   final String id;
   final String fullName;
+
+  /// Eski rol alani. Artik yonlendirmede kullanilmiyor,
+  /// geriye donuk uyumluluk icin duruyor.
   final UserRole role;
+
+  /// Kullanici ilan verebiliyor mu. Isletme olusturunca true olur.
+  final bool canSell;
+
   final String? phone;
   final String? avatarUrl;
-
-  bool get isBusiness => role == UserRole.business;
 
   factory Profile.fromMap(Map<String, dynamic> map) {
     return Profile(
@@ -24,6 +30,7 @@ class Profile {
       role: (map['role'] as String?) == 'business'
           ? UserRole.business
           : UserRole.consumer,
+      canSell: (map['can_sell'] as bool?) ?? false,
       phone: map['phone'] as String?,
       avatarUrl: map['avatar_url'] as String?,
     );
@@ -31,7 +38,6 @@ class Profile {
 
   Map<String, dynamic> toMap() => {
         'full_name': fullName,
-        'role': role.name,
         'phone': phone,
         'avatar_url': avatarUrl,
       };

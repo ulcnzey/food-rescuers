@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../legal/presentation/widgets/consent_checkbox.dart';
+import '../../../offers/presentation/screens/home_screen.dart';
 import '../controllers/auth_controller.dart';
-import 'role_selection_screen.dart';
 
 enum PasswordStrength { none, weak, medium, strong }
 
@@ -95,6 +95,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _handleRegister() async {
+    FocusScope.of(context).unfocus();
     _validateFields();
 
     if (_fullNameError != null ||
@@ -111,13 +112,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           fullName: _fullNameController.text,
         );
 
-    if (!mounted) return;
+    if (!mounted || !ok) return;
 
-    if (ok) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
-      );
-    }
+    // Rol secimi kaldirildi; herkes ayni ana ekranla basliyor.
+    // Ilan verme yetenegi profilden aciliyor.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      (route) => false,
+    );
   }
 
   Widget _buildStrengthIndicator() {
@@ -205,237 +207,253 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Aramıza katıl',
-                      style: theme.textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -1.0,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Hemen kaydol ve gıdayı kurtarmaya başla.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.brightness == Brightness.light
-                            ? AppColors.textMutedLight
-                            : AppColors.textMutedDark,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // Ad Soyad
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Ad Soyad',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        TextField(
-                          controller: _fullNameController,
-                          decoration: InputDecoration(
-                            hintText: 'Adınız Soyadınız',
-                            prefixIcon: const Icon(Icons.person_outline_rounded),
-                            errorText: _fullNameError,
-                          ),
-                          onChanged: (_) {
-                            if (_fullNameError != null) _validateFields();
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // E-posta
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'E-posta Adresi',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            hintText: 'ornek@email.com',
-                            prefixIcon: const Icon(Icons.email_outlined),
-                            errorText: _emailError,
-                          ),
-                          onChanged: (_) {
-                            if (_emailError != null) _validateFields();
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // Şifre
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Şifre',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            hintText: '••••••',
-                            prefixIcon: const Icon(Icons.lock_outlined),
-                            errorText: _passwordError,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
-                          ),
-                          onChanged: (val) {
-                            _checkPasswordStrength(val);
-                            if (_passwordError != null) _validateFields();
-                          },
-                        ),
-                        _buildStrengthIndicator(),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // Şifre Tekrarı
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Şifre Tekrarı',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        TextField(
-                          controller: _confirmPasswordController,
-                          obscureText: _obscureConfirmPassword,
-                          decoration: InputDecoration(
-                            hintText: '••••••',
-                            prefixIcon: const Icon(Icons.lock_clock_outlined),
-                            errorText: _confirmPasswordError,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirmPassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscureConfirmPassword =
-                                      !_obscureConfirmPassword;
-                                });
-                              },
-                            ),
-                          ),
-                          onChanged: (_) {
-                            if (_confirmPasswordError != null) {
-                              _validateFields();
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-
-                    ConsentCheckbox(
-                      value: _termsAccepted,
-                      onChanged: (val) {
-                        setState(() {
-                          _termsAccepted = val ?? false;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // Sunucudan gelen hata
-                    if (authState.errorMessage != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.10),
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusMd),
-                          border: Border.all(
-                            color: AppColors.error.withValues(alpha: 0.35),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.error_outline_rounded,
-                              color: AppColors.error,
-                              size: 20,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Text(
-                                authState.errorMessage!,
-                                style: theme.textTheme.bodySmall
-                                    ?.copyWith(color: AppColors.error),
-                              ),
-                            ),
-                          ],
+      body: GestureDetector(
+        // Bos alana dokununca klavye kapansin.
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Aramıza katıl',
+                        style: theme.textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -1.0,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Hemen kaydol ve gıdayı kurtarmaya başla.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.brightness == Brightness.light
+                              ? AppColors.textMutedLight
+                              : AppColors.textMutedDark,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // Ad Soyad
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Ad Soyad',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          TextField(
+                            controller: _fullNameController,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              hintText: 'Adınız Soyadınız',
+                              prefixIcon:
+                                  const Icon(Icons.person_outline_rounded),
+                              errorText: _fullNameError,
+                            ),
+                            onChanged: (_) {
+                              if (_fullNameError != null) _validateFields();
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // E-posta
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'E-posta Adresi',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          TextField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              hintText: 'ornek@email.com',
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              errorText: _emailError,
+                            ),
+                            onChanged: (_) {
+                              if (_emailError != null) _validateFields();
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // Şifre
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Şifre',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          TextField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              hintText: '••••••',
+                              prefixIcon: const Icon(Icons.lock_outlined),
+                              errorText: _passwordError,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                            ),
+                            onChanged: (val) {
+                              _checkPasswordStrength(val);
+                              if (_passwordError != null) _validateFields();
+                            },
+                          ),
+                          _buildStrengthIndicator(),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // Şifre Tekrarı
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Şifre Tekrarı',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          TextField(
+                            controller: _confirmPasswordController,
+                            obscureText: _obscureConfirmPassword,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) =>
+                                FocusScope.of(context).unfocus(),
+                            decoration: InputDecoration(
+                              hintText: '••••••',
+                              prefixIcon:
+                                  const Icon(Icons.lock_clock_outlined),
+                              errorText: _confirmPasswordError,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscureConfirmPassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscureConfirmPassword =
+                                        !_obscureConfirmPassword;
+                                  });
+                                },
+                              ),
+                            ),
+                            onChanged: (_) {
+                              if (_confirmPasswordError != null) {
+                                _validateFields();
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      ConsentCheckbox(
+                        value: _termsAccepted,
+                        onChanged: (val) {
+                          // Belge okumaya giderken klavye kapansin.
+                          FocusScope.of(context).unfocus();
+                          setState(() {
+                            _termsAccepted = val ?? false;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // Sunucudan gelen hata
+                      if (authState.errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.10),
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusMd),
+                            border: Border.all(
+                              color: AppColors.error.withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: AppColors.error,
+                                size: 20,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  authState.errorMessage!,
+                                  style: theme.textTheme.bodySmall
+                                      ?.copyWith(color: AppColors.error),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+
+                      FilledButton(
+                        onPressed: (_termsAccepted && !authState.isLoading)
+                            ? _handleRegister
+                            : null,
+                        child: authState.isLoading
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Kayıt Ol'),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
                     ],
-
-                    FilledButton(
-                      onPressed: (_termsAccepted && !authState.isLoading)
-                          ? _handleRegister
-                          : null,
-                      child: authState.isLoading
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Kayıt Ol'),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

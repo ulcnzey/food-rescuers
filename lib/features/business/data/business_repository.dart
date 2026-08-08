@@ -15,16 +15,21 @@ class BusinessRepository {
   }
 
   /// Yeni isletme olusturur, olusan kaydin id'sini doner.
+  /// providerType 'individual' ise sadece ucretsiz ilan verilebilir;
+  /// bu kural veritabani tetikleyicisinde zorunlu kilinmistir.
   Future<String> createBusiness({
     required String name,
     required BusinessCategory category,
     required double latitude,
     required double longitude,
+    required List<int> openDays,
+    ProviderType providerType = ProviderType.business,
     String? description,
     String? address,
     String? phone,
     String? opensAt,
     String? closesAt,
+    String? logoUrl,
   }) async {
     final id = await _client.rpc(
       'create_business',
@@ -33,11 +38,14 @@ class BusinessRepository {
         'p_category': category.name,
         'p_lat': latitude,
         'p_lng': longitude,
+        'p_provider_type': providerType.name,
         'p_description': description,
         'p_address': address,
         'p_phone': phone,
         'p_opens_at': opensAt,
         'p_closes_at': closesAt,
+        'p_open_days': openDays,
+        'p_logo_url': logoUrl,
       },
     );
 
@@ -53,6 +61,7 @@ class BusinessRepository {
     String? phone,
     String? opensAt,
     String? closesAt,
+    List<int>? openDays,
   }) async {
     final changes = <String, dynamic>{};
     if (name != null) changes['name'] = name;
@@ -61,6 +70,7 @@ class BusinessRepository {
     if (phone != null) changes['phone'] = phone;
     if (opensAt != null) changes['opens_at'] = opensAt;
     if (closesAt != null) changes['closes_at'] = closesAt;
+    if (openDays != null) changes['open_days'] = openDays;
 
     if (changes.isEmpty) return;
 

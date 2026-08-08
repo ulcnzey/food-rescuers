@@ -3,12 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../business/presentation/screens/business_dashboard_screen.dart';
 import '../../../offers/presentation/screens/home_screen.dart';
-import '../../domain/enums/user_role.dart';
 import '../controllers/auth_controller.dart';
 import 'register_screen.dart';
-import 'role_selection_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -49,6 +46,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    FocusScope.of(context).unfocus();
     _validateFields();
 
     if (_emailError != null || _passwordError != null) {
@@ -62,25 +60,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (!mounted || !ok) return;
 
-    // Giris basarili: profili cek, role gore yonlendir.
-    final profile = await ref.read(authRepositoryProvider).fetchProfile();
-
-    if (!mounted) return;
-
-    // Profil yoksa rol secimine gonder (kenar durum).
-    if (profile == null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
-      );
-      return;
-    }
-
+    // Rol ayrimi kaldirildi; herkes ayni ana ekrana gider.
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => profile.role == UserRole.business
-            ? const BusinessDashboardScreen()
-            : const HomeScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
       (route) => false,
     );
   }
@@ -101,227 +83,237 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         : AppColors.textMutedDark;
 
     return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: AppSpacing.xl),
-                    Text(
-                      'Tekrar hoş geldin',
-                      style: theme.textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -1.0,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Hesabına giriş yap ve gıda israfını önlemeye devam et.',
-                      style:
-                          theme.textTheme.bodyMedium?.copyWith(color: isMuted),
-                    ),
-                    const SizedBox(height: AppSpacing.xxl),
-
-                    // E-posta
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'E-posta Adresi',
-                          style: theme.textTheme.labelMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            hintText: 'ornek@email.com',
-                            prefixIcon: const Icon(Icons.email_outlined),
-                            errorText: _emailError,
-                          ),
-                          onChanged: (_) {
-                            if (authState.errorMessage != null) {
-                              ref
-                                  .read(authControllerProvider.notifier)
-                                  .clearError();
-                            }
-                            if (_emailError != null) _validateFields();
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // Sifre
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Şifre',
-                          style: theme.textTheme.labelMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            hintText: '••••••',
-                            prefixIcon: const Icon(Icons.lock_outlined),
-                            errorText: _passwordError,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
-                          ),
-                          onChanged: (_) {
-                            if (authState.errorMessage != null) {
-                              ref
-                                  .read(authControllerProvider.notifier)
-                                  .clearError();
-                            }
-                            if (_passwordError != null) _validateFields();
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Şifre sıfırlama yakında eklenecek'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'Şifremi unuttum',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        'Tekrar hoş geldin',
+                        style: theme.textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -1.0,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Sunucudan gelen hata
-                    if (authState.errorMessage != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.10),
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusMd),
-                          border: Border.all(
-                            color: AppColors.error.withValues(alpha: 0.35),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.error_outline_rounded,
-                              color: AppColors.error,
-                              size: 20,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Text(
-                                authState.errorMessage!,
-                                style: theme.textTheme.bodySmall
-                                    ?.copyWith(color: AppColors.error),
-                              ),
-                            ),
-                          ],
-                        ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Hesabına giriş yap ve gıda israfını önlemeye devam et.',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: isMuted),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
+                      const SizedBox(height: AppSpacing.xxl),
 
-                    FilledButton(
-                      onPressed: authState.isLoading ? null : _handleLogin,
-                      child: authState.isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Text('Giriş Yap'),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    Row(
-                      children: [
-                        const Expanded(child: Divider()),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md),
-                          child: Text(
-                            'veya',
-                            style: theme.textTheme.bodyMedium
-                                ?.copyWith(color: isMuted),
+                      // E-posta
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'E-posta Adresi',
+                            style: theme.textTheme.labelMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
-                        ),
-                        const Expanded(child: Divider()),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
+                          const SizedBox(height: AppSpacing.sm),
+                          TextField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              hintText: 'ornek@email.com',
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              errorText: _emailError,
+                            ),
+                            onChanged: (_) {
+                              if (authState.errorMessage != null) {
+                                ref
+                                    .read(authControllerProvider.notifier)
+                                    .clearError();
+                              }
+                              if (_emailError != null) _validateFields();
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
 
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Hesabın yok mu? ',
-                          style: theme.textTheme.bodyMedium
-                              ?.copyWith(color: isMuted),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const RegisterScreen(),
+                      // Sifre
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Şifre',
+                            style: theme.textTheme.labelMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          TextField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) => _handleLogin(),
+                            decoration: InputDecoration(
+                              hintText: '••••••',
+                              prefixIcon: const Icon(Icons.lock_outlined),
+                              errorText: _passwordError,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                            ),
+                            onChanged: (_) {
+                              if (authState.errorMessage != null) {
+                                ref
+                                    .read(authControllerProvider.notifier)
+                                    .clearError();
+                              }
+                              if (_passwordError != null) _validateFields();
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Şifre sıfırlama yakında eklenecek'),
+                                duration: Duration(seconds: 2),
                               ),
                             );
                           },
                           child: Text(
-                            'Kayıt Ol',
-                            style: theme.textTheme.bodyMedium?.copyWith(
+                            'Şifremi unuttum',
+                            style: theme.textTheme.labelLarge?.copyWith(
                               color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+
+                      // Sunucudan gelen hata
+                      if (authState.errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.10),
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusMd),
+                            border: Border.all(
+                              color: AppColors.error.withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: AppColors.error,
+                                size: 20,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  authState.errorMessage!,
+                                  style: theme.textTheme.bodySmall
+                                      ?.copyWith(color: AppColors.error),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
                       ],
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
+
+                      FilledButton(
+                        onPressed: authState.isLoading ? null : _handleLogin,
+                        child: authState.isLoading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : const Text('Giriş Yap'),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md),
+                            child: Text(
+                              'veya',
+                              style: theme.textTheme.bodyMedium
+                                  ?.copyWith(color: isMuted),
+                            ),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Hesabın yok mu? ',
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(color: isMuted),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterScreen(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              'Kayıt Ol',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

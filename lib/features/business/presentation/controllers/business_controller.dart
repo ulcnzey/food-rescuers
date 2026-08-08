@@ -14,10 +14,16 @@ final locationServiceProvider = Provider<LocationService>((ref) {
   return const LocationService();
 });
 
-/// Giris yapmis isletme sahibinin isletmesi. Yoksa null doner.
+/// Giris yapmis kullanicinin isletmesi. Yoksa null doner.
 final myBusinessProvider = FutureProvider<Business?>((ref) async {
   ref.watch(authStateProvider);
   return ref.watch(businessRepositoryProvider).fetchMyBusiness();
+});
+
+/// Kullanici ilan verebiliyor mu (isletmesi var mi).
+final canSellProvider = Provider<bool>((ref) {
+  final business = ref.watch(myBusinessProvider);
+  return business.valueOrNull != null;
 });
 
 class BusinessUiState {
@@ -45,11 +51,14 @@ class BusinessController extends StateNotifier<BusinessUiState> {
     required BusinessCategory category,
     required double latitude,
     required double longitude,
+    required List<int> openDays,
+    ProviderType providerType = ProviderType.business,
     String? description,
     String? address,
     String? phone,
     String? opensAt,
     String? closesAt,
+    String? logoUrl,
   }) async {
     state = const BusinessUiState(isLoading: true);
     try {
@@ -58,11 +67,14 @@ class BusinessController extends StateNotifier<BusinessUiState> {
         category: category,
         latitude: latitude,
         longitude: longitude,
+        openDays: openDays,
+        providerType: providerType,
         description: description?.trim(),
         address: address?.trim(),
         phone: phone?.trim(),
         opensAt: opensAt,
         closesAt: closesAt,
+        logoUrl: logoUrl,
       );
 
       // Isletme olustu, onbellegi tazele.

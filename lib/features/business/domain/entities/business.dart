@@ -10,6 +10,28 @@ extension BusinessCategoryX on BusinessCategory {
       };
 }
 
+/// Saglayici tipi.
+/// business  -> ticari isletme, ucretli veya ucretsiz ilan verebilir
+/// individual -> bireysel paylasimci, SADECE ucretsiz bagis yapabilir
+enum ProviderType { business, individual }
+
+extension ProviderTypeX on ProviderType {
+  String get displayName => switch (this) {
+        ProviderType.business => 'İşletme',
+        ProviderType.individual => 'Bireysel Paylaşımcı',
+      };
+
+  String get description => switch (this) {
+        ProviderType.business =>
+          'Fırın, market, kafe gibi ticari işletmeler. Ücretli veya ücretsiz ilan verebilir.',
+        ProviderType.individual =>
+          'Evindeki fazla gıdayı paylaşmak isteyen bireyler. Sadece ücretsiz bağış yapabilir.',
+      };
+
+  /// Ucretli ilan verme yetkisi.
+  bool get canSellPaid => this == ProviderType.business;
+}
+
 class Business {
   const Business({
     required this.id,
@@ -18,6 +40,7 @@ class Business {
     required this.category,
     required this.latitude,
     required this.longitude,
+    this.providerType = ProviderType.business,
     this.description,
     this.address,
     this.logoUrl,
@@ -27,12 +50,14 @@ class Business {
     this.ratingCount = 0,
     this.opensAt,
     this.closesAt,
+    this.openDays = const [0, 1, 2, 3, 4, 5],
   });
 
   final String id;
   final String ownerId;
   final String name;
   final BusinessCategory category;
+  final ProviderType providerType;
   final double latitude;
   final double longitude;
   final String? description;
@@ -43,19 +68,50 @@ class Business {
   final double ratingAvg;
   final int ratingCount;
 
-  /// "07:00" seklinde metin olarak tutulur.
+  /// "07:00:00" formatinda gelir.
   final String? opensAt;
   final String? closesAt;
+
+  /// Pazartesi = 0 ... Pazar = 6
+  final List<int> openDays;
+
+  static const _dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+
+  bool get isIndividual => providerType == ProviderType.individual;
 
   String get workingHoursLabel {
     if (opensAt == null || closesAt == null) return 'Saat bilgisi yok';
     return '${_short(opensAt!)} - ${_short(closesAt!)}';
   }
 
+  String get openDaysLabel {
+    if (openDays.isEmpty) return 'Gün seçilmedi';
+    if (openDays.length == 7) return 'Her gün';
+
+    final sorted = [...openDays]..sort();
+
+    // Ardisik gunleri araliga cevir: Pzt - Cum
+    var consecutive = true;
+    for (var i = 1; i < sorted.length; i++) {
+      if (sorted[i] != sorted[i - 1] + 1) {
+        consecutive = false;
+        break;
+      }
+    }
+
+    if (consecutive && sorted.length > 2) {
+      return '${_dayNames[sorted.first]} - ${_dayNames[sorted.last]}';
+    }
+
+    return sorted.map((d) => _dayNames[d]).join(', ');
+  }
+
   static String _short(String time) =>
       time.length >= 5 ? time.substring(0, 5) : time;
 
   factory Business.fromMap(Map<String, dynamic> map) {
+    final rawDays = map['open_days'];
+
     return Business(
       id: map['id'] as String,
       ownerId: map['owner_id'] as String,
@@ -64,6 +120,9 @@ class Business {
         (c) => c.name == map['category'],
         orElse: () => BusinessCategory.other,
       ),
+      providerType: (map['provider_type'] as String?) == 'individual'
+          ? ProviderType.individual
+          : ProviderType.business,
       latitude: (map['lat'] as num?)?.toDouble() ?? 0,
       longitude: (map['lng'] as num?)?.toDouble() ?? 0,
       description: map['description'] as String?,
@@ -75,6 +134,9 @@ class Business {
       ratingCount: (map['rating_count'] as int?) ?? 0,
       opensAt: map['opens_at'] as String?,
       closesAt: map['closes_at'] as String?,
+      openDays: rawDays is List
+          ? rawDays.map((e) => (e as num).toInt()).toList()
+          : const [0, 1, 2, 3, 4, 5],
     );
   }
 }

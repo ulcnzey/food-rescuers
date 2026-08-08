@@ -65,6 +65,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   /// GECICI: test icin. Profil ekrani yazilinca oraya tasinacak.
   Future<void> _signOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.logout_rounded, color: AppColors.error),
+        title: const Text('Çıkış yapmak istiyor musun?'),
+        content: const Text(
+          'Hesabından çıkacaksın. Tekrar giriş yapman gerekecek.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Çıkış Yap'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
     await ref.read(authControllerProvider.notifier).signOut();
 
     if (!mounted) return;
