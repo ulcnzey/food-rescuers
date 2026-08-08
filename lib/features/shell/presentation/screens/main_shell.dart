@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../offers/presentation/screens/home_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
+import '../../../reservations/presentation/screens/my_orders_screen.dart';
 
 /// Uygulamanin ana kabugu. Alt navigasyon ve sekmeleri barindirir.
 /// Rol ayrimi yok; herkes ayni sekmeleri gorur.
@@ -19,21 +20,23 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell> {
   late int _index = widget.initialIndex;
 
-  /// IndexedStack kullanildigi icin sekmeler arasi gecis yapinca
-  /// onceki sekmenin kaydirma konumu ve durumu korunur.
-  static const _screens = [
-    HomeScreen(),
-    _MapPlaceholder(),
-    _TicketsPlaceholder(),
-    ProfileScreen(),
-  ];
+  void _goToDiscover() => setState(() => _index = 0);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // IndexedStack: sekme degisince onceki ekranin kaydirma
+    // konumu ve durumu korunur.
+    final screens = [
+      const HomeScreen(),
+      const _MapPlaceholder(),
+      MyOrdersScreen(onDiscover: _goToDiscover),
+      const ProfileScreen(),
+    ];
+
     return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
+      body: IndexedStack(index: _index, children: screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
@@ -76,10 +79,12 @@ class _MainShellState extends ConsumerState<MainShell> {
                   label: 'Harita',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.confirmation_number_outlined),
-                  selectedIcon: Icon(Icons.confirmation_number_rounded,
-                      color: AppColors.primary),
-                  label: 'Biletlerim',
+                  icon: Icon(Icons.receipt_long_outlined),
+                  selectedIcon: Icon(
+                    Icons.receipt_long_rounded,
+                    color: AppColors.primary,
+                  ),
+                  label: 'Siparişlerim',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.person_outline_rounded),
@@ -96,37 +101,10 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 }
 
-// ---- Gecici yer tutucular. Ilerleyen adimlarda gercek ekranlar gelecek.
+// ---- Harita ekrani ilerleyen adimda gelecek.
 
 class _MapPlaceholder extends StatelessWidget {
   const _MapPlaceholder();
-
-  @override
-  Widget build(BuildContext context) =>
-      const _Soon(icon: Icons.map_rounded, title: 'Harita', subtitle: 'Yakınındaki ilanları haritada göreceksin.');
-}
-
-class _TicketsPlaceholder extends StatelessWidget {
-  const _TicketsPlaceholder();
-
-  @override
-  Widget build(BuildContext context) => const _Soon(
-        icon: Icons.confirmation_number_rounded,
-        title: 'Biletlerim',
-        subtitle: 'Rezervasyonların ve QR kodların burada olacak.',
-      );
-}
-
-class _Soon extends StatelessWidget {
-  const _Soon({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -145,17 +123,17 @@ class _Soon extends StatelessWidget {
                   color: AppColors.primary.withValues(alpha: 0.10),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 40, color: AppColors.primary),
+                child: const Icon(
+                  Icons.map_rounded,
+                  size: 40,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(height: 20),
-              Text(
-                title,
-                style: theme.textTheme.titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              ),
+              Text('Harita', style: theme.textTheme.headlineSmall),
               const SizedBox(height: 8),
               Text(
-                subtitle,
+                'Yakınındaki ilanları haritada göreceksin.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,

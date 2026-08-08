@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/empty_state.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
+import '../../../offers/presentation/screens/create_offer_screen.dart';
 import '../../domain/entities/business.dart';
 import '../controllers/business_controller.dart';
 import 'business_setup_screen.dart';
@@ -62,8 +64,13 @@ class BusinessDashboardScreen extends ConsumerWidget {
           data: (business) {
             // Kurulum yarida kalmis: tekrar kuruluma gonder.
             if (business == null) {
-              return _SetupPrompt(
-                onSetup: () {
+              return EmptyState(
+                art: EmptyStateArt.storefront,
+                title: 'İşletmen henüz kayıtlı değil',
+                message: 'İlan verebilmen için önce işletme bilgilerini '
+                    'tamamlaman gerekiyor.',
+                actionLabel: 'İşletmemi Oluştur',
+                onAction: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => const BusinessSetupScreen(),
@@ -101,6 +108,8 @@ class _Dashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final accent =
+        business.isIndividual ? AppColors.success : AppColors.secondary;
 
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -114,12 +123,14 @@ class _Dashboard extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: AppColors.secondary.withValues(alpha: 0.15),
+                  color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 ),
-                child: const Icon(
-                  Icons.storefront_rounded,
-                  color: AppColors.secondary,
+                child: Icon(
+                  business.isIndividual
+                      ? Icons.volunteer_activism_rounded
+                      : Icons.storefront_rounded,
+                  color: accent,
                   size: 26,
                 ),
               ),
@@ -132,8 +143,7 @@ class _Dashboard extends StatelessWidget {
                       business.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w800),
+                      style: theme.textTheme.titleLarge,
                     ),
                     Text(
                       business.category.displayName,
@@ -218,7 +228,11 @@ class _Dashboard extends StatelessWidget {
             title: 'Yeni İlan Ekle',
             subtitle: 'Gün sonu kalan ürünlerini listele',
             color: AppColors.primary,
-            onTap: () => _soon(context),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CreateOfferScreen()),
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.sm),
           _ActionTile(
@@ -343,11 +357,7 @@ class _StatCard extends StatelessWidget {
             child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            value,
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
+          Text(value, style: theme.textTheme.headlineSmall),
           Text(
             label,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -447,61 +457,6 @@ class _InfoRow extends StatelessWidget {
           child: Text(text, style: theme.textTheme.bodyMedium),
         ),
       ],
-    );
-  }
-}
-
-class _SetupPrompt extends StatelessWidget {
-  const _SetupPrompt({required this.onSetup});
-
-  final VoidCallback onSetup;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: AppColors.secondary.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.add_business_rounded,
-                size: 44,
-                color: AppColors.secondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'İşletmen henüz kayıtlı değil',
-              style: theme.textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w700),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'İlan verebilmen için önce işletme bilgilerini tamamlaman '
-              'gerekiyor.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            FilledButton(
-              onPressed: onSetup,
-              child: const Text('İşletmemi Oluştur'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

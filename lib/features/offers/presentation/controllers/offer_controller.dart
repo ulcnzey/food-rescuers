@@ -5,6 +5,7 @@ import '../../../../core/providers/supabase_providers.dart';
 import '../../../business/presentation/controllers/business_controller.dart';
 import '../../data/offer_repository.dart';
 import '../../domain/entities/offer.dart';
+import '../../domain/entities/offer_detail.dart';
 
 final offerRepositoryProvider = Provider<OfferRepository>((ref) {
   return OfferRepository(ref.watch(supabaseProvider));
@@ -17,6 +18,85 @@ final myOffersProvider = FutureProvider<List<Offer>>((ref) async {
 
   return ref.watch(offerRepositoryProvider).fetchMyOffers(business.name);
 });
+
+// ---------------------------------------------------------------- SORGULAR
+
+/// nearbyOffersProvider icin parametre paketi.
+/// Esitlik tanimli oldugu icin ayni sorgu tekrar cagrildiginda
+/// Riverpod onbellekten donuyor, gereksiz istek atilmiyor.
+class NearbyQuery {
+  const NearbyQuery({
+    required this.latitude,
+    required this.longitude,
+    this.radiusMeters = 10000,
+    this.foodType,
+  });
+
+  final double latitude;
+  final double longitude;
+  final int radiusMeters;
+  final FoodType? foodType;
+
+  @override
+  bool operator ==(Object other) =>
+      other is NearbyQuery &&
+      other.latitude == latitude &&
+      other.longitude == longitude &&
+      other.radiusMeters == radiusMeters &&
+      other.foodType == foodType;
+
+  @override
+  int get hashCode => Object.hash(latitude, longitude, radiusMeters, foodType);
+}
+
+/// Yakindaki aktif ilanlar. Konum veya kategori degisince yenilenir.
+final nearbyOffersProvider =
+    FutureProvider.autoDispose.family<List<Offer>, NearbyQuery>(
+  (ref, query) async {
+    return ref.watch(offerRepositoryProvider).fetchNearby(
+          latitude: query.latitude,
+          longitude: query.longitude,
+          radiusMeters: query.radiusMeters,
+          foodType: query.foodType,
+        );
+  },
+);
+
+class OfferDetailQuery {
+  const OfferDetailQuery({
+    required this.offerId,
+    this.latitude,
+    this.longitude,
+  });
+
+  final String offerId;
+  final double? latitude;
+  final double? longitude;
+
+  @override
+  bool operator ==(Object other) =>
+      other is OfferDetailQuery &&
+      other.offerId == offerId &&
+      other.latitude == latitude &&
+      other.longitude == longitude;
+
+  @override
+  int get hashCode => Object.hash(offerId, latitude, longitude);
+}
+
+/// Tek ilanin detayi.
+final offerDetailProvider =
+    FutureProvider.autoDispose.family<OfferDetail, OfferDetailQuery>(
+  (ref, query) async {
+    return ref.watch(offerRepositoryProvider).fetchDetail(
+          offerId: query.offerId,
+          latitude: query.latitude,
+          longitude: query.longitude,
+        );
+  },
+);
+
+// ---------------------------------------------------------------- KONTROL
 
 class OfferUiState {
   const OfferUiState({this.isLoading = false, this.errorMessage});

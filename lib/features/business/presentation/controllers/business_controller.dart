@@ -2,16 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/auth_error_mapper.dart';
 import '../../../../core/providers/supabase_providers.dart';
-import '../../../../core/services/location_service.dart';
 import '../../data/business_repository.dart';
 import '../../domain/entities/business.dart';
 
 final businessRepositoryProvider = Provider<BusinessRepository>((ref) {
   return BusinessRepository(ref.watch(supabaseProvider));
-});
-
-final locationServiceProvider = Provider<LocationService>((ref) {
-  return const LocationService();
 });
 
 /// Giris yapmis kullanicinin isletmesi. Yoksa null doner.
@@ -22,8 +17,7 @@ final myBusinessProvider = FutureProvider<Business?>((ref) async {
 
 /// Kullanici ilan verebiliyor mu (isletmesi var mi).
 final canSellProvider = Provider<bool>((ref) {
-  final business = ref.watch(myBusinessProvider);
-  return business.valueOrNull != null;
+  return ref.watch(myBusinessProvider).valueOrNull != null;
 });
 
 class BusinessUiState {

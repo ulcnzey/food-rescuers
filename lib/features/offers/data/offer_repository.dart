@@ -1,17 +1,19 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/entities/offer.dart';
+import '../domain/entities/offer_detail.dart';
 
 class OfferRepository {
   OfferRepository(this._client);
 
   final SupabaseClient _client;
 
-  /// Yakindaki aktif ilanlar.
+  /// Yakindaki aktif ilanlar. Mesafe hesabi ve filtreleme
+  /// PostGIS tarafinda yapilir; istemci sadece sonucu alir.
   Future<List<Offer>> fetchNearby({
     required double latitude,
     required double longitude,
-    int radiusMeters = 5000,
+    int radiusMeters = 10000,
     FoodType? foodType,
     double? maxPrice,
     int limit = 50,
@@ -33,6 +35,25 @@ class OfferRepository {
     return rows
         .map((e) => Offer.fromNearbyMap(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// Tek ilanin detayi. Konum verilirse mesafe de hesaplanir.
+  Future<OfferDetail> fetchDetail({
+    required String offerId,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final rows = await _client.rpc(
+      'offer_detail',
+      params: {
+        'p_offer_id': offerId,
+        'p_lat': latitude,
+        'p_lng': longitude,
+      },
+    ) as List<dynamic>;
+
+    if (rows.isEmpty) throw Exception('OFFER_NOT_FOUND');
+    return OfferDetail.fromMap(rows.first as Map<String, dynamic>);
   }
 
   /// Isletmenin kendi ilanlari.
