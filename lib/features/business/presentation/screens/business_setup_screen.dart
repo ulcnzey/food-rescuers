@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/image_picker_field.dart';
 import '../../../../core/widgets/phone_field.dart';
+import '../../../offers/presentation/controllers/offer_controller.dart';
 import '../../domain/entities/business.dart';
 import '../controllers/business_controller.dart';
 import 'business_dashboard_screen.dart';
@@ -26,6 +30,7 @@ class _BusinessSetupScreenState extends ConsumerState<BusinessSetupScreen> {
   final _descriptionController = TextEditingController();
   final _phoneController = TextEditingController();
   BusinessCategory _category = BusinessCategory.bakery;
+  ProviderType _providerType = ProviderType.business;
   String? _nameError;
   String? _phoneError;
   PhoneValue _phone = const PhoneValue(
@@ -34,6 +39,9 @@ class _BusinessSetupScreenState extends ConsumerState<BusinessSetupScreen> {
     isComplete: false,
     expectedDigits: 10,
   );
+
+  File? _logoFile;
+  bool _pickingLogo = false;
 
   // ---- Adim 2: konum
   final _addressController = TextEditingController();
@@ -64,6 +72,20 @@ class _BusinessSetupScreenState extends ConsumerState<BusinessSetupScreen> {
         1 => _lat != null && _lng != null,
         _ => _openDays.isNotEmpty,
       };
+
+  Future<void> _pickLogo(bool fromCamera) async {
+    setState(() => _pickingLogo = true);
+
+    final file =
+        await ref.read(imageUploadServiceProvider).pick(fromCamera: fromCamera);
+
+    if (!mounted) return;
+
+    setState(() {
+      _pickingLogo = false;
+      if (file != null) _logoFile = file;
+    });
+  }
 
   void _next() {
     FocusScope.of(context).unfocus();
@@ -160,13 +182,26 @@ class _BusinessSetupScreenState extends ConsumerState<BusinessSetupScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
 
+    // Logo varsa once yukle; basarisiz olursa kayit yine de olusur.
+    String? logoUrl;
+    if (_logoFile != null) {
+      final result = await ref
+          .read(imageUploadServiceProvider)
+          .upload(file: _logoFile!, folder: 'logos');
+      logoUrl = result.url;
+    }
+
+    if (!mounted) return;
+
     final ok =
         await ref.read(businessControllerProvider.notifier).createBusiness(
               name: _nameController.text,
               category: _category,
+              providerType: _providerType,
               latitude: _lat!,
               longitude: _lng!,
               openDays: _openDays.toList()..sort(),
+              logoUrl: logoUrl,
               description: _descriptionController.text.trim().isEmpty
                   ? null
                   : _descriptionController.text,
@@ -232,9 +267,16 @@ class _BusinessSetupScreenState extends ConsumerState<BusinessSetupScreen> {
                       descriptionController: _descriptionController,
                       phoneController: _phoneController,
                       category: _category,
+                      providerType: _providerType,
                       nameError: _nameError,
                       phoneError: _phoneError,
+                      logoFile: _logoFile,
+                      pickingLogo: _pickingLogo,
+                      onPickLogo: _pickLogo,
+                      onRemoveLogo: () => setState(() => _logoFile = null),
                       onCategoryChanged: (c) => setState(() => _category = c),
+                      onProviderTypeChanged: (p) =>
+                          setState(() => _providerType = p),
                       onNameChanged: () => setState(() {}),
                       onPhoneChanged: (v) => setState(() {
                         _phone = v;
@@ -340,9 +382,15 @@ class _StepInfo extends StatelessWidget {
     required this.descriptionController,
     required this.phoneController,
     required this.category,
+    required this.providerType,
     required this.nameError,
     required this.phoneError,
+    required this.logoFile,
+    required this.pickingLogo,
+    required this.onPickLogo,
+    required this.onRemoveLogo,
     required this.onCategoryChanged,
+    required this.onProviderTypeChanged,
     required this.onNameChanged,
     required this.onPhoneChanged,
   });
@@ -351,9 +399,15 @@ class _StepInfo extends StatelessWidget {
   final TextEditingController descriptionController;
   final TextEditingController phoneController;
   final BusinessCategory category;
+  final ProviderType providerType;
   final String? nameError;
   final String? phoneError;
+  final File? logoFile;
+  final bool pickingLogo;
+  final Future<void> Function(bool) onPickLogo;
+  final VoidCallback onRemoveLogo;
   final ValueChanged<BusinessCategory> onCategoryChanged;
+  final ValueChanged<ProviderType> onProviderTypeChanged;
   final VoidCallback onNameChanged;
   final ValueChanged<PhoneValue> onPhoneChanged;
 
@@ -366,11 +420,7 @@ class _StepInfo extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'İşletmeni tanıtalım',
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
+          Text('İşletmeni tanıtalım', style: theme.textTheme.headlineSmall),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Bu bilgiler müşterilerin ilanlarında görünecek.',
@@ -380,8 +430,102 @@ class _StepInfo extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
 
+          // ---- Logo
+          Center(
+            child: ImagePickerField(
+              onPick: onPickLogo,
+              localFile: logoFile,
+              isUploading: pickingLogo,
+              onRemove: onRemoveLogo,
+              height: 110,
+              circular: true,
+              label: '',
+              hint: '',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Center(
+            child: Text(
+              'Logo ekle (isteğe bağlı)',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // ---- Saglayici tipi
           Text(
-            'İşletme Adı',
+            'Kim olarak paylaşacaksın?',
+            style: theme.textTheme.labelMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: ProviderType.values.map((p) {
+              final active = p == providerType;
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.sm),
+                  child: GestureDetector(
+                    onTap: () => onProviderTypeChanged(p),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: active
+                            ? AppColors.primary.withValues(alpha: 0.10)
+                            : theme.colorScheme.surface,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusLg),
+                        border: Border.all(
+                          color: active
+                              ? AppColors.primary
+                              : theme.colorScheme.outline,
+                          width: active ? 1.6 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            p == ProviderType.business
+                                ? Icons.storefront_rounded
+                                : Icons.volunteer_activism_rounded,
+                            color: active
+                                ? AppColors.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                            size: 24,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            p.displayName,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              fontWeight:
+                                  active ? FontWeight.w700 : FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            providerType.description,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          Text(
+            providerType == ProviderType.business
+                ? 'İşletme Adı'
+                : 'Görünecek Adın',
             style: theme.textTheme.labelMedium
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
@@ -390,7 +534,9 @@ class _StepInfo extends StatelessWidget {
             controller: nameController,
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
-              hintText: 'Ahmet Usta Fırın',
+              hintText: providerType == ProviderType.business
+                  ? 'Ahmet Usta Fırın'
+                  : 'Zeynep\'in Mutfağı',
               prefixIcon: const Icon(Icons.storefront_outlined),
               errorText: nameError,
             ),
@@ -505,11 +651,7 @@ class _StepLocation extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'İşletmen nerede?',
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
+          Text('İşletmen nerede?', style: theme.textTheme.headlineSmall),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Müşteriler yakınlarındaki ilanları konuma göre görüyor. '
@@ -672,11 +814,7 @@ class _StepHours extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Çalışma saatlerin',
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
+          Text('Çalışma saatlerin', style: theme.textTheme.headlineSmall),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Profilinde görünecek genel saatler. Her ilan için ayrıca '
@@ -839,11 +977,7 @@ class _TimeBox extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                value,
-                style: theme.textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w800),
-              ),
+              Text(value, style: theme.textTheme.headlineSmall),
             ],
           ),
         ),

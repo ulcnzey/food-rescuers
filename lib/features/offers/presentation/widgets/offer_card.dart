@@ -57,14 +57,9 @@ class OfferCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: style.color.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(style.icon, size: 15, color: style.color),
+                      _BusinessAvatar(
+                        logoUrl: offer.businessLogo,
+                        style: style,
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
@@ -134,6 +129,35 @@ class OfferCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Isletme logosu. Yoksa kategori ikonu gosterilir.
+class _BusinessAvatar extends StatelessWidget {
+  const _BusinessAvatar({required this.logoUrl, required this.style});
+
+  final String? logoUrl;
+  final FoodTypeStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: style.color.withValues(alpha: 0.15),
+        shape: BoxShape.circle,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: logoUrl != null
+          ? Image.network(
+              logoUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) =>
+                  Icon(style.icon, size: 15, color: style.color),
+            )
+          : Icon(style.icon, size: 15, color: style.color),
     );
   }
 }
@@ -220,10 +244,19 @@ class _ImageArea extends StatelessWidget {
           Positioned(
             bottom: AppSpacing.sm,
             left: AppSpacing.sm,
-            child: _Badge(
-              text: '${offer.timeLeftLabel} kaldı',
-              color: Colors.black.withValues(alpha: 0.6),
-              icon: Icons.schedule_rounded,
+            child: Row(
+              children: [
+                _Badge(
+                  text: '${offer.timeLeftLabel} kaldı',
+                  color: Colors.black.withValues(alpha: 0.6),
+                  icon: Icons.schedule_rounded,
+                ),
+                const SizedBox(width: 6),
+                _Badge(
+                  text: '${offer.dateLabel} ${offer.pickupWindowLabel}',
+                  color: Colors.black.withValues(alpha: 0.6),
+                ),
+              ],
             ),
           ),
         ],
@@ -331,9 +364,7 @@ class _FavoriteButton extends StatelessWidget {
           transitionBuilder: (child, anim) =>
               ScaleTransition(scale: anim, child: child),
           child: Icon(
-            isFavorite
-                ? Icons.favorite_rounded
-                : Icons.favorite_border_rounded,
+            isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
             key: ValueKey(isFavorite),
             size: 18,
             color: isFavorite ? AppColors.error : Colors.black87,

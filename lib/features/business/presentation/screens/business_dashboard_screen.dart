@@ -165,6 +165,11 @@ class _Dashboard extends ConsumerWidget {
                 ),
               ),
               IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.storefront_outlined),
+                tooltip: 'Müşteri görünümüne dön',
+              ),
+              IconButton(
                 onPressed: onSignOut,
                 icon: const Icon(Icons.logout_rounded),
                 tooltip: 'Çıkış yap',

@@ -78,11 +78,16 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
 
     if (!mounted) return;
 
-    // Kamerayi tekrar baslat, siradaki musteriye hazir olsun.
+    // Basarili teslimden sonra tarayiciyi kapat, panele don.
+    if (success) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    // Hatada kamerayi tekrar baslat, siradaki denemeye hazir ol.
     setState(() => _processing = false);
     await _scanner.start();
   }
-
   /// QR okunamazsa 6 haneli kodu elle girme secenegi.
   Future<void> _enterCodeManually() async {
     _codeController.clear();

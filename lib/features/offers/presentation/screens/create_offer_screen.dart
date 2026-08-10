@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/image_picker_field.dart';
 import '../../../business/domain/entities/business.dart';
 import '../../../business/presentation/controllers/business_controller.dart';
 import '../../domain/entities/offer.dart';
@@ -27,6 +30,9 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
   int _quantity = 1;
   bool _isFree = false;
 
+  File? _imageFile;
+  bool _pickingImage = false;
+
   /// 0 = bugun, 1 = yarin
   int _dayOffset = 0;
   TimeOfDay _pickupStart = const TimeOfDay(hour: 18, minute: 0);
@@ -44,8 +50,9 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
     super.dispose();
   }
 
-  double get _price =>
-      _isFree ? 0 : double.tryParse(_priceController.text.replaceAll(',', '.')) ?? 0;
+  double get _price => _isFree
+      ? 0
+      : double.tryParse(_priceController.text.replaceAll(',', '.')) ?? 0;
 
   double? get _originalPrice {
     final v = double.tryParse(
@@ -62,13 +69,21 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
 
   DateTime _resolve(TimeOfDay t) {
     final now = DateTime.now();
-    return DateTime(
-      now.year,
-      now.month,
-      now.day + _dayOffset,
-      t.hour,
-      t.minute,
-    );
+    return DateTime(now.year, now.month, now.day + _dayOffset, t.hour, t.minute);
+  }
+
+  Future<void> _pickImage(bool fromCamera) async {
+    setState(() => _pickingImage = true);
+
+    final file =
+        await ref.read(imageUploadServiceProvider).pick(fromCamera: fromCamera);
+
+    if (!mounted) return;
+
+    setState(() {
+      _pickingImage = false;
+      if (file != null) _imageFile = file;
+    });
   }
 
   Future<void> _pickTime({required bool isStart}) async {
@@ -127,6 +142,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
               ? null
               : _descriptionController.text,
           originalPrice: _originalPrice,
+          imageFile: _imageFile,
         );
 
     if (!mounted || !ok) return;
@@ -196,11 +212,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
               120,
             ),
             children: [
-              Text(
-                'Ne kurtarıyorsun?',
-                style: theme.textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
-              ),
+              Text('Ne kurtarıyorsun?', style: theme.textTheme.headlineSmall),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 'Gün sonu kalan ürünlerini birkaç adımda listele.',
@@ -209,6 +221,15 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
+
+              // ---------------- Gorsel
+              ImagePickerField(
+                onPick: _pickImage,
+                localFile: _imageFile,
+                isUploading: _pickingImage,
+                onRemove: () => setState(() => _imageFile = null),
+              ),
+              const SizedBox(height: AppSpacing.lg),
 
               // ---------------- Urun adi
               const _Label('Ürün Adı'),
@@ -248,7 +269,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
               // ---------------- Fiyat
               const _Label('Fiyat'),
               if (forcedFree)
-                _InfoBanner(
+                const _InfoBanner(
                   icon: Icons.volunteer_activism_rounded,
                   color: AppColors.success,
                   text: 'Bireysel paylaşımcı olarak yalnızca ücretsiz '
@@ -342,6 +363,8 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
               const _Label('Önizleme'),
               _PreviewCard(
                 businessName: business.name,
+                logoUrl: business.logoUrl,
+                imageFile: _imageFile,
                 title: _titleController.text.trim().isEmpty
                     ? 'Ürün adı'
                     : _titleController.text.trim(),
@@ -603,8 +626,11 @@ class _DiscountBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.local_offer_rounded,
-              size: 15, color: AppColors.secondary),
+          const Icon(
+            Icons.local_offer_rounded,
+            size: 15,
+            color: AppColors.secondary,
+          ),
           const SizedBox(width: 6),
           Text(
             '%$percent indirim uygulanacak',
@@ -659,8 +685,7 @@ class _QuantityStepper extends StatelessWidget {
             child: Text(
               '$value',
               textAlign: TextAlign.center,
-              style: theme.textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
+              style: theme.textTheme.headlineSmall,
             ),
           ),
           _StepButton(
@@ -819,11 +844,7 @@ class _TimeBox extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                value,
-                style: theme.textTheme.titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w800),
-              ),
+              Text(value, style: theme.textTheme.titleLarge),
             ],
           ),
         ),
@@ -841,9 +862,13 @@ class _PreviewCard extends StatelessWidget {
     required this.originalPrice,
     required this.quantity,
     required this.pickupLabel,
+    this.logoUrl,
+    this.imageFile,
   });
 
   final String businessName;
+  final String? logoUrl;
+  final File? imageFile;
   final String title;
   final FoodType foodType;
   final double price;
@@ -866,38 +891,72 @@ class _PreviewCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          Container(
-            height: 96,
+          SizedBox(
+            height: 110,
             width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  style.color.withValues(alpha: 0.30),
-                  style.color.withValues(alpha: 0.10),
-                ],
-              ),
-            ),
-            child: Center(
-              child: Icon(style.icon,
-                  size: 40, color: style.color.withValues(alpha: 0.6)),
-            ),
+            child: imageFile != null
+                ? Image.file(imageFile!, fit: BoxFit.cover)
+                : DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          style.color.withValues(alpha: 0.30),
+                          style.color.withValues(alpha: 0.10),
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        style.icon,
+                        size: 40,
+                        color: style.color.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  businessName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: style.color.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: logoUrl != null
+                          ? Image.network(
+                              logoUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Icon(
+                                style.icon,
+                                size: 13,
+                                color: style.color,
+                              ),
+                            )
+                          : Icon(style.icon, size: 13, color: style.color),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        businessName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 6),
                 Text(
                   title,
                   maxLines: 1,
@@ -908,8 +967,11 @@ class _PreviewCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 Row(
                   children: [
-                    Icon(Icons.schedule_rounded,
-                        size: 14, color: theme.colorScheme.onSurfaceVariant),
+                    Icon(
+                      Icons.schedule_rounded,
+                      size: 14,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -991,10 +1053,8 @@ class _InfoBanner extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: color),
+              style:
+                  Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
             ),
           ),
         ],

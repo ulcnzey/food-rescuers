@@ -96,6 +96,18 @@ class OfferRepository {
     return id as String;
   }
 
+  /// Mevcut ilanin gorselini gunceller. Sahiplik kontrolu
+  /// veritabani fonksiyonunda yapilir.
+  Future<void> updateOfferImage({
+    required String offerId,
+    required String imageUrl,
+  }) async {
+    await _client.rpc(
+      'update_offer_image',
+      params: {'p_offer_id': offerId, 'p_image_url': imageUrl},
+    );
+  }
+
   Future<void> cancelOffer(String offerId) async {
     await _client.rpc('cancel_offer', params: {'p_offer_id': offerId});
   }

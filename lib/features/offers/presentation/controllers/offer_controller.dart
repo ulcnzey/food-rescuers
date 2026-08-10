@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/auth_error_mapper.dart';
 import '../../../../core/providers/supabase_providers.dart';
+import '../../../../core/services/image_upload_service.dart';
 import '../../../business/presentation/controllers/business_controller.dart';
 import '../../data/offer_repository.dart';
 import '../../domain/entities/offer.dart';
@@ -9,6 +12,10 @@ import '../../domain/entities/offer_detail.dart';
 
 final offerRepositoryProvider = Provider<OfferRepository>((ref) {
   return OfferRepository(ref.watch(supabaseProvider));
+});
+
+final imageUploadServiceProvider = Provider<ImageUploadService>((ref) {
+  return ImageUploadService(ref.watch(supabaseProvider));
 });
 
 /// Isletmenin kendi ilanlari.
@@ -118,6 +125,8 @@ class OfferController extends StateNotifier<OfferUiState> {
   final OfferRepository _repo;
   final Ref _ref;
 
+  /// Ilan olusturur. Gorsel verilmisse once Storage'a yukler,
+  /// donen URL'i ilan kaydina baglar.
   Future<bool> createOffer({
     required String title,
     required FoodType foodType,
@@ -127,17 +136,47 @@ class OfferController extends StateNotifier<OfferUiState> {
     required DateTime pickupEnd,
     String? description,
     double? originalPrice,
+    File? imageFile,
   }) async {
-    return _run(() => _repo.createOffer(
-          title: title.trim(),
-          foodType: foodType,
-          price: price,
-          quantity: quantity,
-          pickupStart: pickupStart,
-          pickupEnd: pickupEnd,
-          description: description?.trim(),
-          originalPrice: originalPrice,
-        ));
+    state = const OfferUiState(isLoading: true);
+
+    try {
+      String? imageUrl;
+
+      // Gorsel yuklenemezse ilan yine de olusturulur;
+      // gorseli sonradan eklemek mumkun.
+      if (imageFile != null) {
+        final result = await _ref
+            .read(imageUploadServiceProvider)
+            .upload(file: imageFile, folder: 'offers');
+
+        if (!result.isSuccess) {
+          state = OfferUiState(errorMessage: result.error);
+          return false;
+        }
+
+        imageUrl = result.url;
+      }
+
+      await _repo.createOffer(
+        title: title.trim(),
+        foodType: foodType,
+        price: price,
+        quantity: quantity,
+        pickupStart: pickupStart,
+        pickupEnd: pickupEnd,
+        description: description?.trim(),
+        originalPrice: originalPrice,
+        imageUrl: imageUrl,
+      );
+
+      _ref.invalidate(myOffersProvider);
+      state = const OfferUiState();
+      return true;
+    } catch (e) {
+      state = OfferUiState(errorMessage: mapAuthError(e));
+      return false;
+    }
   }
 
   Future<bool> cancelOffer(String offerId) async {

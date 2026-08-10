@@ -38,6 +38,7 @@ class Offer {
     required this.rating,
     required this.foodType,
     this.businessId = '',
+    this.businessLogo,
     this.description,
     this.imageUrl,
     this.quantityTotal = 0,
@@ -51,6 +52,10 @@ class Offer {
   final String id;
   final String businessId;
   final String businessName;
+
+  /// Isletme logosu. Kartta yuvarlak rozet olarak gosterilir.
+  final String? businessLogo;
+
   final String title;
   final String? description;
   final String? imageUrl;
@@ -83,10 +88,14 @@ class Offer {
 
   bool get isLastChance => quantityAvailable > 0 && quantityAvailable <= 2;
 
+  /// Satilan adet. Isletme panelinde ilerleme cubugunda kullanilir.
+  int get soldCount => quantityTotal - quantityAvailable;
+
   /// "1 sa 20 dk" seklinde kalan sure.
   String get timeLeftLabel {
     final diff = pickupEnd.difference(DateTime.now());
     if (diff.isNegative) return 'Süre doldu';
+    if (diff.inHours >= 24) return '${diff.inDays} gün';
     if (diff.inHours >= 1) {
       final m = diff.inMinutes % 60;
       return m == 0 ? '${diff.inHours} sa' : '${diff.inHours} sa $m dk';
@@ -104,6 +113,23 @@ class Offer {
     return '${_hm(pickupStart!)} - ${_hm(pickupEnd)}';
   }
 
+  /// "Bugün" / "Yarın" / "12.08"
+  String get dateLabel {
+    final now = DateTime.now();
+    final d = pickupEnd;
+
+    if (d.year == now.year && d.month == now.month && d.day == now.day) {
+      return 'Bugün';
+    }
+
+    final t = now.add(const Duration(days: 1));
+    if (d.year == t.year && d.month == t.month && d.day == t.day) {
+      return 'Yarın';
+    }
+
+    return '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}';
+  }
+
   static String _hm(DateTime d) =>
       '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
@@ -113,6 +139,7 @@ class Offer {
       id: map['id'] as String,
       businessId: (map['business_id'] as String?) ?? '',
       businessName: (map['business_name'] as String?) ?? '',
+      businessLogo: map['business_logo'] as String?,
       title: (map['title'] as String?) ?? '',
       description: map['description'] as String?,
       imageUrl: map['image_url'] as String?,
