@@ -14,6 +14,7 @@ class EmptyState extends StatelessWidget {
     required this.title,
     required this.message,
     this.art = EmptyStateArt.basket,
+    this.artSize = 200,
     this.actionLabel,
     this.onAction,
     this.secondaryLabel,
@@ -23,6 +24,7 @@ class EmptyState extends StatelessWidget {
   final String title;
   final String message;
   final EmptyStateArt art;
+  final double artSize;
   final String? actionLabel;
   final VoidCallback? onAction;
   final String? secondaryLabel;
@@ -38,13 +40,21 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            switch (art) {
-              EmptyStateArt.basket => const EmptyBasketIllustration(size: 200),
-              EmptyStateArt.noResults => const NoResultsIllustration(size: 200),
-              EmptyStateArt.success => const SuccessIllustration(size: 200),
-              EmptyStateArt.storefront =>
-                const StorefrontIllustration(size: 200),
-            },
+            // CustomPaint kendine boyut vermez, ebeveyninden alir.
+            // Kaydirilabilir alan icinde sonsuz yukseklik olusabilecegi
+            // icin acik boyut veriyoruz.
+            SizedBox(
+              width: artSize,
+              height: artSize,
+              child: switch (art) {
+                EmptyStateArt.basket => EmptyBasketIllustration(size: artSize),
+                EmptyStateArt.noResults =>
+                  NoResultsIllustration(size: artSize),
+                EmptyStateArt.success => SuccessIllustration(size: artSize),
+                EmptyStateArt.storefront =>
+                  StorefrontIllustration(size: artSize),
+              },
+            ),
             const SizedBox(height: AppSpacing.lg),
             Text(
               title,

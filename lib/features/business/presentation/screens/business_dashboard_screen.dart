@@ -6,10 +6,12 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
+import '../../../offers/presentation/controllers/offer_controller.dart';
 import '../../../offers/presentation/screens/create_offer_screen.dart';
 import '../../domain/entities/business.dart';
 import '../controllers/business_controller.dart';
 import 'business_setup_screen.dart';
+import 'qr_scanner_screen.dart';
 
 class BusinessDashboardScreen extends ConsumerWidget {
   const BusinessDashboardScreen({super.key});
@@ -62,7 +64,6 @@ class BusinessDashboardScreen extends ConsumerWidget {
           ),
 
           data: (business) {
-            // Kurulum yarida kalmis: tekrar kuruluma gonder.
             if (business == null) {
               return EmptyState(
                 art: EmptyStateArt.storefront,
@@ -83,7 +84,10 @@ class BusinessDashboardScreen extends ConsumerWidget {
             return _Dashboard(
               business: business,
               onSignOut: () => _signOut(context, ref),
-              onRefresh: () async => ref.invalidate(myBusinessProvider),
+              onRefresh: () async {
+                ref.invalidate(myBusinessProvider);
+                ref.invalidate(myOffersProvider);
+              },
             );
           },
         ),
@@ -94,7 +98,7 @@ class BusinessDashboardScreen extends ConsumerWidget {
 
 // ---------------------------------------------------------------- PANEL
 
-class _Dashboard extends StatelessWidget {
+class _Dashboard extends ConsumerWidget {
   const _Dashboard({
     required this.business,
     required this.onSignOut,
@@ -106,10 +110,16 @@ class _Dashboard extends StatelessWidget {
   final Future<void> Function() onRefresh;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final accent =
         business.isIndividual ? AppColors.success : AppColors.secondary;
+
+    final offersAsync = ref.watch(myOffersProvider);
+    final offers = offersAsync.valueOrNull ?? [];
+
+    final activeCount = offers.where((o) => o.isActive).length;
+    final reservedToday = offers.fold<int>(0, (sum, o) => sum + o.reservedCount);
 
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -171,7 +181,7 @@ class _Dashboard extends StatelessWidget {
                 child: _StatCard(
                   icon: Icons.local_offer_outlined,
                   label: 'Aktif İlan',
-                  value: '0',
+                  value: '$activeCount',
                   color: AppColors.primary,
                 ),
               ),
@@ -179,8 +189,8 @@ class _Dashboard extends StatelessWidget {
               Expanded(
                 child: _StatCard(
                   icon: Icons.shopping_bag_outlined,
-                  label: 'Bugünkü Rezervasyon',
-                  value: '0',
+                  label: 'Toplam Rezervasyon',
+                  value: '$reservedToday',
                   color: AppColors.secondary,
                 ),
               ),
@@ -193,9 +203,9 @@ class _Dashboard extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatCard(
-                  icon: Icons.volunteer_activism_outlined,
-                  label: 'Kurtarılan Öğün',
-                  value: '0',
+                  icon: Icons.list_alt_outlined,
+                  label: 'Toplam İlan',
+                  value: '${offers.length}',
                   color: AppColors.success,
                 ),
               ),
@@ -240,13 +250,17 @@ class _Dashboard extends StatelessWidget {
             title: 'QR Kod Okut',
             subtitle: 'Müşterinin teslimatını onayla',
             color: AppColors.secondary,
-            onTap: () => _soon(context),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.sm),
           _ActionTile(
             icon: Icons.list_alt_rounded,
             title: 'İlanlarım',
-            subtitle: 'Aktif ve geçmiş ilanların',
+            subtitle: '${offers.length} ilan · $activeCount aktif',
             color: AppColors.info,
             onTap: () => _soon(context),
           ),
@@ -293,12 +307,6 @@ class _Dashboard extends StatelessWidget {
                     text: business.phone!,
                   ),
                 ],
-                const SizedBox(height: AppSpacing.sm),
-                _InfoRow(
-                  icon: Icons.my_location_rounded,
-                  text:
-                      '${business.latitude.toStringAsFixed(5)}, ${business.longitude.toStringAsFixed(5)}',
-                ),
               ],
             ),
           ),
@@ -482,11 +490,7 @@ class _ErrorView extends StatelessWidget {
               color: AppColors.error,
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(
-              'Bilgiler yüklenemedi',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
-            ),
+            Text('Bilgiler yüklenemedi', style: theme.textTheme.titleMedium),
             const SizedBox(height: AppSpacing.lg),
             OutlinedButton.icon(
               onPressed: onRetry,

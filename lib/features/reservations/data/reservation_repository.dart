@@ -45,6 +45,11 @@ class ReservationRepository {
     );
   }
 
+  /// QR okunamazsa 6 haneli kodla onaylama.
+  Future<void> completeByCode(String code) async {
+    await _client.rpc('complete_by_code', params: {'p_code': code});
+  }
+
   Future<ImpactStats> fetchImpact() async {
     final rows = await _client.rpc('my_impact') as List<dynamic>;
     if (rows.isEmpty) return const ImpactStats();

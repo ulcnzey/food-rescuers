@@ -61,8 +61,14 @@ class ReservationController extends StateNotifier<ReservationUiState> {
     return _run(() => _repo.cancel(reservationId));
   }
 
+  /// Isletme tarafi: QR okutularak teslim onayi.
   Future<bool> completeByQr(String qrToken) async {
     return _run(() => _repo.completeByQr(qrToken));
+  }
+
+  /// Isletme tarafi: QR okunamazsa 6 haneli kodla onay.
+  Future<bool> completeByCode(String code) async {
+    return _run(() => _repo.completeByCode(code));
   }
 
   void clearError() => state = state.copyWith();
