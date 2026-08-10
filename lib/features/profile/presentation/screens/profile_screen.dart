@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/animations/app_animations.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/theme_controller.dart';
@@ -10,6 +11,7 @@ import '../../../business/domain/entities/business.dart';
 import '../../../business/presentation/controllers/business_controller.dart';
 import '../../../business/presentation/screens/business_dashboard_screen.dart';
 import '../../../business/presentation/screens/business_setup_screen.dart';
+import '../../../reservations/presentation/controllers/reservation_controller.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -55,12 +57,16 @@ class ProfileScreen extends ConsumerWidget {
     final businessAsync = ref.watch(myBusinessProvider);
     final themeMode = ref.watch(themeControllerProvider);
 
+    // Etki istatistikleri tamamlanan rezervasyonlardan hesaplanir.
+    final stats = ref.watch(myImpactProvider).valueOrNull;
+
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(profileProvider);
             ref.invalidate(myBusinessProvider);
+            ref.invalidate(myImpactProvider);
           },
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -92,11 +98,12 @@ class ProfileScreen extends ConsumerWidget {
                               : 'Kullanıcı',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w800),
+                          style: theme.textTheme.titleLarge,
                         ),
                         Text(
-                          'Gıda kurtarıcı',
+                          (stats?.savedMeals ?? 0) > 0
+                              ? '${stats!.savedMeals} öğün kurtardın'
+                              : 'Gıda kurtarıcı',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -109,13 +116,13 @@ class ProfileScreen extends ConsumerWidget {
 
               const SizedBox(height: AppSpacing.lg),
 
-              // ---- Etki kartlari
+              // ---- Etki kartlari (gercek veri)
               Row(
                 children: [
                   Expanded(
                     child: _ImpactCard(
                       icon: Icons.volunteer_activism_rounded,
-                      value: '0',
+                      value: (stats?.savedMeals ?? 0).toDouble(),
                       label: 'Kurtarılan öğün',
                       color: AppColors.primary,
                     ),
@@ -124,7 +131,9 @@ class ProfileScreen extends ConsumerWidget {
                   Expanded(
                     child: _ImpactCard(
                       icon: Icons.eco_rounded,
-                      value: '0 kg',
+                      value: stats?.co2Kg ?? 0,
+                      suffix: ' kg',
+                      decimals: 1,
                       label: 'Önlenen CO₂',
                       color: AppColors.success,
                     ),
@@ -134,7 +143,8 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.md),
               _ImpactCard(
                 icon: Icons.savings_outlined,
-                value: '0 ₺',
+                value: stats?.savedMoney ?? 0,
+                suffix: ' ₺',
                 label: 'Toplam tasarruf',
                 color: AppColors.secondary,
                 wide: true,
@@ -305,18 +315,30 @@ class _ImpactCard extends StatelessWidget {
     required this.value,
     required this.label,
     required this.color,
+    this.suffix = '',
+    this.decimals = 0,
     this.wide = false,
   });
 
   final IconData icon;
-  final String value;
+  final double value;
   final String label;
   final Color color;
+  final String suffix;
+  final int decimals;
   final bool wide;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Sayac animasyonu: deger sifirdan hedefe dogru artar.
+    final counter = CounterText(
+      value: value,
+      suffix: suffix,
+      decimals: decimals,
+      style: theme.textTheme.headlineSmall,
+    );
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -333,11 +355,7 @@ class _ImpactCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      value,
-                      style: theme.textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w800),
-                    ),
+                    counter,
                     Text(
                       label,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -353,11 +371,7 @@ class _ImpactCard extends StatelessWidget {
               children: [
                 _iconBox(color, icon),
                 const SizedBox(height: AppSpacing.sm),
-                Text(
-                  value,
-                  style: theme.textTheme.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w800),
-                ),
+                counter,
                 Text(
                   label,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -473,18 +487,32 @@ class _MyBusinessTile extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 ),
-                child: Icon(
-                  business.isIndividual
-                      ? Icons.volunteer_activism_rounded
-                      : Icons.storefront_rounded,
-                  color: accent,
-                  size: 22,
-                ),
+                clipBehavior: Clip.antiAlias,
+                child: business.logoUrl != null
+                    ? Image.network(
+                        business.logoUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Icon(
+                          business.isIndividual
+                              ? Icons.volunteer_activism_rounded
+                              : Icons.storefront_rounded,
+                          color: accent,
+                          size: 22,
+                        ),
+                      )
+                    : Icon(
+                        business.isIndividual
+                            ? Icons.volunteer_activism_rounded
+                            : Icons.storefront_rounded,
+                        color: accent,
+                        size: 22,
+                      ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
