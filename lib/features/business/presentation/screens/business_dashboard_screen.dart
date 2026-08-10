@@ -12,6 +12,7 @@ import '../../domain/entities/business.dart';
 import '../controllers/business_controller.dart';
 import 'business_setup_screen.dart';
 import 'qr_scanner_screen.dart';
+import 'my_offers_screen.dart';
 
 class BusinessDashboardScreen extends ConsumerWidget {
   const BusinessDashboardScreen({super.key});
@@ -267,7 +268,11 @@ class _Dashboard extends ConsumerWidget {
             title: 'İlanlarım',
             subtitle: '${offers.length} ilan · $activeCount aktif',
             color: AppColors.info,
-            onTap: () => _soon(context),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MyOffersScreen()),
+              );
+            },
           ),
 
           const SizedBox(height: AppSpacing.lg),
@@ -322,14 +327,6 @@ class _Dashboard extends ConsumerWidget {
     );
   }
 
-  void _soon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Bu özellik yakında eklenecek'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
 }
 
 // ---------------------------------------------------------------- PARCALAR
