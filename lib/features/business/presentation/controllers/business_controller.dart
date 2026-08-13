@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/auth_error_mapper.dart';
 import '../../../../core/providers/supabase_providers.dart';
+import '../../../offers/presentation/controllers/offer_controller.dart';
 import '../../data/business_repository.dart';
 import '../../domain/entities/business.dart';
 
@@ -72,6 +75,62 @@ class BusinessController extends StateNotifier<BusinessUiState> {
       );
 
       // Isletme olustu, onbellegi tazele.
+      _ref.invalidate(myBusinessProvider);
+
+      state = const BusinessUiState();
+      return true;
+    } catch (e) {
+      state = BusinessUiState(errorMessage: mapAuthError(e));
+      return false;
+    }
+  }
+
+  /// Isletme bilgilerini gunceller. Yeni logo dosyasi verilmisse
+  /// once Storage'a yuklenir, donen URL kayda islenir.
+  Future<bool> updateBusiness({
+    String? name,
+    BusinessCategory? category,
+    String? description,
+    String? address,
+    String? phone,
+    String? opensAt,
+    String? closesAt,
+    List<int>? openDays,
+    File? logoFile,
+    double? latitude,
+    double? longitude,
+  }) async {
+    state = const BusinessUiState(isLoading: true);
+
+    try {
+      String? logoUrl;
+
+      if (logoFile != null) {
+        final result = await _ref
+            .read(imageUploadServiceProvider)
+            .upload(file: logoFile, folder: 'logos');
+
+        if (!result.isSuccess) {
+          state = BusinessUiState(errorMessage: result.error);
+          return false;
+        }
+        logoUrl = result.url;
+      }
+
+      await _repo.updateMyBusiness(
+        name: name?.trim(),
+        category: category,
+        description: description?.trim(),
+        address: address?.trim(),
+        phone: phone?.trim(),
+        opensAt: opensAt,
+        closesAt: closesAt,
+        openDays: openDays,
+        logoUrl: logoUrl,
+        latitude: latitude,
+        longitude: longitude,
+      );
+
       _ref.invalidate(myBusinessProvider);
 
       state = const BusinessUiState();

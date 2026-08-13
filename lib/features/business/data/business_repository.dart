@@ -52,28 +52,37 @@ class BusinessRepository {
     return id as String;
   }
 
-  /// Mevcut isletme bilgilerini gunceller.
-  Future<void> updateBusiness({
-    required String businessId,
+  /// Isletme bilgilerini kismi gunceller.
+  /// Null gonderilen alanlar veritabaninda COALESCE ile korunur,
+  /// boylece istemci sadece degisen alanlari gondermek zorunda.
+  Future<void> updateMyBusiness({
     String? name,
+    BusinessCategory? category,
     String? description,
     String? address,
     String? phone,
     String? opensAt,
     String? closesAt,
     List<int>? openDays,
+    String? logoUrl,
+    double? latitude,
+    double? longitude,
   }) async {
-    final changes = <String, dynamic>{};
-    if (name != null) changes['name'] = name;
-    if (description != null) changes['description'] = description;
-    if (address != null) changes['address'] = address;
-    if (phone != null) changes['phone'] = phone;
-    if (opensAt != null) changes['opens_at'] = opensAt;
-    if (closesAt != null) changes['closes_at'] = closesAt;
-    if (openDays != null) changes['open_days'] = openDays;
-
-    if (changes.isEmpty) return;
-
-    await _client.from('businesses').update(changes).eq('id', businessId);
+    await _client.rpc(
+      'update_my_business',
+      params: {
+        'p_name': name,
+        'p_category': category?.name,
+        'p_description': description,
+        'p_address': address,
+        'p_phone': phone,
+        'p_opens_at': opensAt,
+        'p_closes_at': closesAt,
+        'p_open_days': openDays,
+        'p_logo_url': logoUrl,
+        'p_lat': latitude,
+        'p_lng': longitude,
+      },
+    );
   }
 }

@@ -11,8 +11,9 @@ import '../../../offers/presentation/screens/create_offer_screen.dart';
 import '../../domain/entities/business.dart';
 import '../controllers/business_controller.dart';
 import 'business_setup_screen.dart';
-import 'qr_scanner_screen.dart';
+import 'edit_business_screen.dart';
 import 'my_offers_screen.dart';
+import 'qr_scanner_screen.dart';
 
 class BusinessDashboardScreen extends ConsumerWidget {
   const BusinessDashboardScreen({super.key});
@@ -120,14 +121,14 @@ class _Dashboard extends ConsumerWidget {
     final offers = offersAsync.valueOrNull ?? [];
 
     final activeCount = offers.where((o) => o.isActive).length;
-    final reservedToday = offers.fold<int>(0, (sum, o) => sum + o.reservedCount);
+    final reservedTotal = offers.fold<int>(0, (s, o) => s + o.reservedCount);
 
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          // Ust bilgi
+          // ---- Ust bilgi
           Row(
             children: [
               Container(
@@ -137,13 +138,14 @@ class _Dashboard extends ConsumerWidget {
                   color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 ),
-                child: Icon(
-                  business.isIndividual
-                      ? Icons.volunteer_activism_rounded
-                      : Icons.storefront_rounded,
-                  color: accent,
-                  size: 26,
-                ),
+                clipBehavior: Clip.antiAlias,
+                child: business.logoUrl != null
+                    ? Image.network(
+                        business.logoUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _providerIcon(accent),
+                      )
+                    : _providerIcon(accent),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -180,7 +182,7 @@ class _Dashboard extends ConsumerWidget {
 
           const SizedBox(height: AppSpacing.lg),
 
-          // Ozet kartlari
+          // ---- Ozet kartlari
           Row(
             children: [
               Expanded(
@@ -196,7 +198,7 @@ class _Dashboard extends ConsumerWidget {
                 child: _StatCard(
                   icon: Icons.shopping_bag_outlined,
                   label: 'Toplam Rezervasyon',
-                  value: '$reservedToday',
+                  value: '$reservedTotal',
                   color: AppColors.secondary,
                 ),
               ),
@@ -231,7 +233,7 @@ class _Dashboard extends ConsumerWidget {
 
           const SizedBox(height: AppSpacing.lg),
 
-          // Hizli islemler
+          // ---- Hizli islemler
           Text(
             'Hızlı İşlemler',
             style: theme.textTheme.titleMedium
@@ -277,7 +279,7 @@ class _Dashboard extends ConsumerWidget {
 
           const SizedBox(height: AppSpacing.lg),
 
-          // Isletme bilgileri
+          // ---- Isletme bilgileri
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
@@ -288,12 +290,33 @@ class _Dashboard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'İşletme Bilgileri',
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                Row(
+                  children: [
+                    Text(
+                      'İşletme Bilgileri',
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                EditBusinessScreen(business: business),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.edit_outlined, size: 16),
+                      label: const Text('Düzenle'),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.sm),
                 _InfoRow(
                   icon: Icons.schedule_rounded,
                   text: business.workingHoursLabel,
@@ -327,6 +350,13 @@ class _Dashboard extends ConsumerWidget {
     );
   }
 
+  Widget _providerIcon(Color accent) => Icon(
+        business.isIndividual
+            ? Icons.volunteer_activism_rounded
+            : Icons.storefront_rounded,
+        color: accent,
+        size: 26,
+      );
 }
 
 // ---------------------------------------------------------------- PARCALAR
