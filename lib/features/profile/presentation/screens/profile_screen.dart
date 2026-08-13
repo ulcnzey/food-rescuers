@@ -12,6 +12,7 @@ import '../../../business/presentation/controllers/business_controller.dart';
 import '../../../business/presentation/screens/business_dashboard_screen.dart';
 import '../../../business/presentation/screens/business_setup_screen.dart';
 import '../../../reservations/presentation/controllers/reservation_controller.dart';
+import '../../../favorites/presentation/screens/favorites_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -191,7 +192,11 @@ class ProfileScreen extends ConsumerWidget {
               _SettingTile(
                 icon: Icons.favorite_outline_rounded,
                 title: 'Favorilerim',
-                onTap: () => _soon(context),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const FavoritesScreen()),
+                  );
+                },
               ),
               _SettingTile(
                 icon: Icons.notifications_none_rounded,

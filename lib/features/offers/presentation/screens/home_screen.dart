@@ -6,6 +6,7 @@ import '../../../../core/providers/location_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../favorites/presentation/controllers/favorite_controller.dart';
 import '../../../reservations/presentation/controllers/reservation_controller.dart';
 import '../../domain/entities/offer.dart';
 import '../controllers/offer_controller.dart';
@@ -43,8 +44,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            await ref.read(locationControllerProvider.notifier).resolveCurrent();
+            await ref
+                .read(locationControllerProvider.notifier)
+                .resolveCurrent();
             ref.invalidate(myImpactProvider);
+            await ref.read(favoriteIdsProvider.notifier).load();
           },
           child: CustomScrollView(
             slivers: [
@@ -146,6 +150,7 @@ class _OfferSection extends ConsumerWidget {
     );
 
     final offersAsync = ref.watch(nearbyOffersProvider(query));
+    final favoriteIds = ref.watch(favoriteIdsProvider);
 
     return offersAsync.when(
       loading: () => const SliverToBoxAdapter(child: _LoadingList()),
@@ -179,9 +184,8 @@ class _OfferSection extends ConsumerWidget {
             hasScrollBody: false,
             child: EmptyState(
               art: filtered ? EmptyStateArt.noResults : EmptyStateArt.basket,
-              title: filtered
-                  ? 'Sonuç bulunamadı'
-                  : 'Yakınında henüz ilan yok',
+              title:
+                  filtered ? 'Sonuç bulunamadı' : 'Yakınında henüz ilan yok',
               message: filtered
                   ? 'Farklı bir kategori veya arama deneyebilirsin.'
                   : 'Bölgende ilan yayınlandığında burada göreceksin. '
@@ -196,8 +200,7 @@ class _OfferSection extends ConsumerWidget {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: Row(
                   children: [
                     Text(
@@ -227,20 +230,28 @@ class _OfferSection extends ConsumerWidget {
                 itemCount: visible.length,
                 separatorBuilder: (_, _) =>
                     const SizedBox(height: AppSpacing.md),
-                itemBuilder: (_, i) => FadeSlideIn(
-                  key: ValueKey(visible[i].id),
-                  index: i,
-                  child: OfferCard(
-                    offer: visible[i],
-                    onTap: () {
-                      Navigator.of(context).push(
-                        SmoothPageRoute<void>(
-                          page: OfferDetailScreen(offerId: visible[i].id),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                itemBuilder: (_, i) {
+                  final offer = visible[i];
+
+                  return FadeSlideIn(
+                    key: ValueKey(offer.id),
+                    index: i,
+                    child: OfferCard(
+                      offer: offer,
+                      isFavorite: favoriteIds.contains(offer.businessId),
+                      onFavoriteToggle: () => ref
+                          .read(favoriteIdsProvider.notifier)
+                          .toggle(offer.businessId),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          SmoothPageRoute<void>(
+                            page: OfferDetailScreen(offerId: offer.id),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -261,8 +272,8 @@ class _LoadingList extends StatelessWidget {
       child: Column(
         children: List.generate(
           3,
-          (i) => Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          (i) => const Padding(
+            padding: EdgeInsets.only(bottom: AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -271,12 +282,12 @@ class _LoadingList extends StatelessWidget {
                   height: 140,
                   radius: AppSpacing.radiusXl,
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                const ShimmerBox(width: 160, height: 14),
-                const SizedBox(height: 8),
-                const ShimmerBox(width: 220, height: 18),
-                const SizedBox(height: 8),
-                const ShimmerBox(width: 120, height: 12),
+                SizedBox(height: AppSpacing.sm),
+                ShimmerBox(width: 160, height: 14),
+                SizedBox(height: 8),
+                ShimmerBox(width: 220, height: 18),
+                SizedBox(height: 8),
+                ShimmerBox(width: 120, height: 12),
               ],
             ),
           ),

@@ -11,6 +11,7 @@ import '../../../reservations/presentation/screens/reservation_success_screen.da
 import '../../domain/entities/offer_detail.dart';
 import '../controllers/offer_controller.dart';
 import '../widgets/food_type_style.dart';
+import '../../../favorites/presentation/controllers/favorite_controller.dart';
 
 class OfferDetailScreen extends ConsumerStatefulWidget {
   const OfferDetailScreen({super.key, required this.offerId});
@@ -205,6 +206,7 @@ class _Content extends ConsumerWidget {
     final theme = Theme.of(context);
     final style = FoodTypeStyle.of(offer.foodType);
     final state = ref.watch(reservationControllerProvider);
+    final isFavorite = ref.watch(favoriteIdsProvider).contains(offer.businessId);
 
     return Stack(
       children: [
@@ -221,8 +223,13 @@ class _Content extends ConsumerWidget {
               ),
               actions: [
                 _CircleButton(
-                  icon: Icons.favorite_border_rounded,
-                  onTap: () {},
+                  icon: isFavorite
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color: isFavorite ? AppColors.error : Colors.black87,
+                  onTap: () => ref
+                      .read(favoriteIdsProvider.notifier)
+                      .toggle(offer.businessId),
                 ),
                 const SizedBox(width: AppSpacing.sm),
               ],
@@ -538,6 +545,47 @@ class _HeroImage extends StatelessWidget {
       );
 }
 
+class _Badge extends StatelessWidget {
+  const _Badge({
+    required this.text,
+    required this.color,
+    this.icon,
+  });
+
+  final String text;
+  final Color color;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 13, color: Colors.white),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PriceBlock extends StatelessWidget {
   const _PriceBlock({required this.offer});
 
@@ -803,10 +851,15 @@ class _StepButton extends StatelessWidget {
 }
 
 class _CircleButton extends StatelessWidget {
-  const _CircleButton({required this.icon, required this.onTap});
+  const _CircleButton({
+    required this.icon,
+    required this.onTap,
+    this.color = Colors.black87,
+  });
 
   final IconData icon;
   final VoidCallback onTap;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -827,44 +880,18 @@ class _CircleButton extends StatelessWidget {
               ),
             ],
           ),
-          child: Icon(icon, size: 20, color: Colors.black87),
-        ),
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({required this.text, required this.color, this.icon});
-
-  final String text;
-  final Color color;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 12, color: Colors.white),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            transitionBuilder: (child, anim) =>
+                ScaleTransition(scale: anim, child: child),
+            child: Icon(
+              icon,
+              key: ValueKey(icon),
+              size: 20,
+              color: color,
             ),
           ),
-        ],
+        ),
       ),
     );
   }
