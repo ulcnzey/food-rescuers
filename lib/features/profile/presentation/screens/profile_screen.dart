@@ -13,6 +13,7 @@ import '../../../business/presentation/screens/business_dashboard_screen.dart';
 import '../../../business/presentation/screens/business_setup_screen.dart';
 import '../../../reservations/presentation/controllers/reservation_controller.dart';
 import '../../../favorites/presentation/screens/favorites_screen.dart';
+import '../../../notifications/presentation/screens/notifications_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -201,7 +202,13 @@ class ProfileScreen extends ConsumerWidget {
               _SettingTile(
                 icon: Icons.notifications_none_rounded,
                 title: 'Bildirimler',
-                onTap: () => _soon(context),
+                onTap: ()  {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
+                  );
+                },
               ),
               _SettingTile(
                 icon: Icons.brightness_6_outlined,

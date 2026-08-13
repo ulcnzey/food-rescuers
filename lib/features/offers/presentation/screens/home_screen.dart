@@ -13,6 +13,8 @@ import '../controllers/offer_controller.dart';
 import '../widgets/food_type_style.dart';
 import '../widgets/offer_card.dart';
 import 'offer_detail_screen.dart';
+import '../../../notifications/presentation/controllers/notification_controller.dart';
+import '../../../notifications/presentation/screens/notifications_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -299,7 +301,7 @@ class _LoadingList extends StatelessWidget {
 
 // ---------------------------------------------------------------- PARCALAR
 
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   const _Header({
     required this.locationLabel,
     required this.isLoading,
@@ -311,8 +313,9 @@ class _Header extends StatelessWidget {
   final VoidCallback onTapLocation;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final unread = ref.watch(unreadCountProvider).valueOrNull ?? 0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -362,9 +365,49 @@ class _Header extends StatelessWidget {
               ),
             ),
           ),
-          IconButton.filledTonal(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_none_rounded),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton.filledTonal(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.notifications_none_rounded),
+              ),
+              if (unread > 0)
+                Positioned(
+                  right: 2,
+                  top: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 2,
+                    ),
+                    constraints: const BoxConstraints(minWidth: 18),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(
+                        color: theme.scaffoldBackgroundColor,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      unread > 9 ? '9+' : '$unread',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
