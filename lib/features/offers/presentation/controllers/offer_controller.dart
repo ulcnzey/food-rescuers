@@ -9,6 +9,7 @@ import '../../../business/presentation/controllers/business_controller.dart';
 import '../../data/offer_repository.dart';
 import '../../domain/entities/offer.dart';
 import '../../domain/entities/offer_detail.dart';
+import '../../domain/entities/offer_filter.dart';
 
 final offerRepositoryProvider = Provider<OfferRepository>((ref) {
   return OfferRepository(ref.watch(supabaseProvider));
@@ -31,43 +32,53 @@ final myOffersProvider = FutureProvider<List<Offer>>((ref) async {
 /// nearbyOffersProvider icin parametre paketi.
 /// Esitlik tanimli oldugu icin ayni sorgu tekrar cagrildiginda
 /// Riverpod onbellekten donuyor, gereksiz istek atilmiyor.
+/// nearbyOffersProvider icin parametre paketi.
+/// Esitlik tanimli oldugu icin ayni sorgu tekrar cagrildiginda
+/// Riverpod onbellekten donuyor, gereksiz istek atilmiyor.
 class NearbyQuery {
   const NearbyQuery({
     required this.latitude,
     required this.longitude,
-    this.radiusMeters = 10000,
-    this.foodType,
+    this.filter = const OfferFilter(),
   });
 
   final double latitude;
   final double longitude;
-  final int radiusMeters;
-  final FoodType? foodType;
+  final OfferFilter filter;
 
   @override
   bool operator ==(Object other) =>
       other is NearbyQuery &&
       other.latitude == latitude &&
       other.longitude == longitude &&
-      other.radiusMeters == radiusMeters &&
-      other.foodType == foodType;
+      other.filter == filter;
 
   @override
-  int get hashCode => Object.hash(latitude, longitude, radiusMeters, foodType);
+  int get hashCode => Object.hash(latitude, longitude, filter);
 }
 
-/// Yakindaki aktif ilanlar. Konum veya kategori degisince yenilenir.
+/// Yakindaki aktif ilanlar. Konum veya filtre degisince yenilenir.
 final nearbyOffersProvider =
     FutureProvider.autoDispose.family<List<Offer>, NearbyQuery>(
   (ref, query) async {
+    final f = query.filter;
+
     return ref.watch(offerRepositoryProvider).fetchNearby(
           latitude: query.latitude,
           longitude: query.longitude,
-          radiusMeters: query.radiusMeters,
-          foodType: query.foodType,
+          radiusMeters: f.radiusMeters,
+          foodType: f.foodType,
+          maxPrice: f.maxPrice,
+          freeOnly: f.freeOnly,
+          pickupBefore: f.pickupWindow.upperBound,
+          sort: f.sort.dbValue,
         );
   },
 );
+
+/// Harita ve kesfet ekranlarinin paylastigi filtre durumu.
+final offerFilterProvider =
+    StateProvider<OfferFilter>((ref) => const OfferFilter());
 
 class OfferDetailQuery {
   const OfferDetailQuery({

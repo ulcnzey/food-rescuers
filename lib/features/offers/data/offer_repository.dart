@@ -10,12 +10,17 @@ class OfferRepository {
 
   /// Yakindaki aktif ilanlar. Mesafe hesabi ve filtreleme
   /// PostGIS tarafinda yapilir; istemci sadece sonucu alir.
+  /// Yakindaki aktif ilanlar. Mesafe hesabi, filtreleme ve siralama
+  /// PostGIS tarafinda yapilir; istemci sadece sonucu alir.
   Future<List<Offer>> fetchNearby({
     required double latitude,
     required double longitude,
     int radiusMeters = 10000,
     FoodType? foodType,
     double? maxPrice,
+    bool freeOnly = false,
+    DateTime? pickupBefore,
+    String sort = 'distance',
     int limit = 50,
     int offset = 0,
   }) async {
@@ -27,6 +32,9 @@ class OfferRepository {
         'p_radius_m': radiusMeters,
         'p_food_type': foodType?.name,
         'p_max_price': maxPrice,
+        'p_free_only': freeOnly,
+        'p_pickup_before': pickupBefore?.toUtc().toIso8601String(),
+        'p_sort': sort,
         'p_limit': limit,
         'p_offset': offset,
       },

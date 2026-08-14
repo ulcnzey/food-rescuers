@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/animations/app_animations.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/utils/walking_time.dart';
 import '../../domain/entities/offer.dart';
 import 'food_type_style.dart';
 
@@ -34,9 +35,9 @@ class OfferCard extends StatelessWidget {
           border: Border.all(color: theme.colorScheme.outline),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
@@ -51,73 +52,92 @@ class OfferCard extends StatelessWidget {
               onFavoriteToggle: onFavoriteToggle,
             ),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Isletme adi + puan
                   Row(
                     children: [
-                      _BusinessAvatar(
-                        logoUrl: offer.businessLogo,
-                        style: style,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Text(
                           offer.businessName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
                           ),
                         ),
                       ),
                       if (offer.rating > 0) ...[
-                        const Icon(
-                          Icons.star_rounded,
-                          size: 16,
-                          color: AppColors.secondary,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          offer.rating.toStringAsFixed(1),
-                          style: theme.textTheme.labelLarge,
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                AppColors.secondary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.radiusSm,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 13,
+                                color: AppColors.secondary,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                offer.rating.toStringAsFixed(1),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.secondary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: 3),
+
+                  // Urun adi
                   Text(
                     offer.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
+
                   const SizedBox(height: AppSpacing.sm),
+
+                  // Alt bilgi satiri: yuruyus, alim saati, fiyat
                   Row(
                     children: [
-                      Icon(
-                        Icons.place_outlined,
-                        size: 14,
-                        color: theme.colorScheme.onSurfaceVariant,
+                      _MetaItem(
+                        icon: Icons.directions_walk_rounded,
+                        text: WalkingTime.isWalkable(offer.distanceKm)
+                            ? WalkingTime.label(offer.distanceKm)
+                            : offer.distanceLabel,
                       ),
-                      const SizedBox(width: 3),
-                      Text(
-                        offer.distanceLabel,
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Icon(
-                        Icons.inventory_2_outlined,
-                        size: 14,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '${offer.quantityAvailable} adet',
-                        style: theme.textTheme.bodySmall,
+                      _Dot(color: theme.colorScheme.outline),
+                      _MetaItem(
+                        icon: Icons.schedule_rounded,
+                        text: offer.pickupWindowLabel,
                       ),
                       const Spacer(),
                       _PriceTag(offer: offer),
@@ -133,36 +153,7 @@ class OfferCard extends StatelessWidget {
   }
 }
 
-/// Isletme logosu. Yoksa kategori ikonu gosterilir.
-class _BusinessAvatar extends StatelessWidget {
-  const _BusinessAvatar({required this.logoUrl, required this.style});
-
-  final String? logoUrl;
-  final FoodTypeStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 28,
-      height: 28,
-      decoration: BoxDecoration(
-        color: style.color.withValues(alpha: 0.15),
-        shape: BoxShape.circle,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: logoUrl != null
-          ? Image.network(
-              logoUrl!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) =>
-                  Icon(style.icon, size: 15, color: style.color),
-            )
-          : Icon(style.icon, size: 15, color: style.color),
-    );
-  }
-}
-
-/// Ustteki gorsel alani + rozetler
+/// Ustteki gorsel alani. Logo sol ust kosede, rozetler uzerinde.
 class _ImageArea extends StatelessWidget {
   const _ImageArea({
     required this.offer,
@@ -179,12 +170,11 @@ class _ImageArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 140,
+      height: 150,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Gercek fotograf varsa onu, yoksa kategori gradyani.
           if (offer.imageUrl != null)
             Image.network(
               offer.imageUrl!,
@@ -196,20 +186,44 @@ class _ImageArea extends StatelessWidget {
           else
             _GradientFallback(style: style),
 
-          // Alt tarafta okunabilirlik icin karartma
+          // Ust ve alt karartma: rozet ve logonun okunmasi icin
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.center,
-                colors: [Colors.black26, Colors.transparent],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black26,
+                  Colors.transparent,
+                  Colors.transparent,
+                  Colors.black26,
+                ],
+                stops: [0, 0.35, 0.65, 1],
               ),
             ),
           ),
 
+          // ---- Sol ust: isletme logosu
           Positioned(
-            top: AppSpacing.sm,
             left: AppSpacing.sm,
+            top: AppSpacing.sm,
+            child: _LogoBadge(logoUrl: offer.businessLogo, style: style),
+          ),
+
+          // ---- Sag ust: favori
+          Positioned(
+            right: AppSpacing.sm,
+            top: AppSpacing.sm,
+            child: _FavoriteButton(
+              isFavorite: isFavorite,
+              onTap: onFavoriteToggle,
+            ),
+          ),
+
+          // ---- Sol alt: indirim / ucretsiz + son firsat
+          Positioned(
+            left: AppSpacing.sm,
+            bottom: AppSpacing.sm,
             child: Row(
               children: [
                 if (offer.isFree)
@@ -220,11 +234,9 @@ class _ImageArea extends StatelessWidget {
                     color: AppColors.secondary,
                   ),
                 if (offer.isLastChance) ...[
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 5),
                   _Badge(
-                    text: offer.quantityAvailable == 1
-                        ? 'Son 1 adet'
-                        : 'Son ${offer.quantityAvailable} adet',
+                    text: 'Son ${offer.quantityAvailable}',
                     color: AppColors.error,
                   ),
                 ],
@@ -232,37 +244,63 @@ class _ImageArea extends StatelessWidget {
             ),
           ),
 
+          // ---- Sag alt: kalan sure
           Positioned(
-            top: AppSpacing.sm,
             right: AppSpacing.sm,
-            child: _FavoriteButton(
-              isFavorite: isFavorite,
-              onTap: onFavoriteToggle,
-            ),
-          ),
-
-          Positioned(
             bottom: AppSpacing.sm,
-            left: AppSpacing.sm,
-            child: Row(
-              children: [
-                _Badge(
-                  text: '${offer.timeLeftLabel} kaldı',
-                  color: Colors.black.withValues(alpha: 0.6),
-                  icon: Icons.schedule_rounded,
-                ),
-                const SizedBox(width: 6),
-                _Badge(
-                  text: '${offer.dateLabel} ${offer.pickupWindowLabel}',
-                  color: Colors.black.withValues(alpha: 0.6),
-                ),
-              ],
+            child: _Badge(
+              text: offer.timeLeftLabel,
+              color: Colors.black.withValues(alpha: 0.6),
+              icon: Icons.timer_outlined,
             ),
           ),
         ],
       ),
     );
   }
+}
+
+/// Isletme logosu rozeti. Beyaz cerceveli, gorselin uzerinde durur.
+class _LogoBadge extends StatelessWidget {
+  const _LogoBadge({required this.logoUrl, required this.style});
+
+  final String? logoUrl;
+  final FoodTypeStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(3),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        child: logoUrl != null
+            ? Image.network(
+                logoUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _fallback(),
+              )
+            : _fallback(),
+      ),
+    );
+  }
+
+  Widget _fallback() => DecoratedBox(
+        decoration: BoxDecoration(color: style.color.withValues(alpha: 0.15)),
+        child: Center(child: Icon(style.icon, size: 20, color: style.color)),
+      );
 }
 
 class _GradientFallback extends StatelessWidget {
@@ -281,8 +319,8 @@ class _GradientFallback extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                style.color.withValues(alpha: 0.30),
-                style.color.withValues(alpha: 0.10),
+                style.color.withValues(alpha: 0.32),
+                style.color.withValues(alpha: 0.12),
               ],
             ),
           ),
@@ -290,11 +328,56 @@ class _GradientFallback extends StatelessWidget {
         Center(
           child: Icon(
             style.icon,
-            size: 52,
-            color: style.color.withValues(alpha: 0.55),
+            size: 54,
+            color: style.color.withValues(alpha: 0.5),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MetaItem extends StatelessWidget {
+  const _MetaItem({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: theme.colorScheme.onSurfaceVariant),
+        const SizedBox(width: 3),
+        Text(
+          text,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Dot extends StatelessWidget {
+  const _Dot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      child: Container(
+        width: 3,
+        height: 3,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
     );
   }
 }
@@ -309,17 +392,17 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 12, color: Colors.white),
-            const SizedBox(width: 4),
+            Icon(icon, size: 11, color: Colors.white),
+            const SizedBox(width: 3),
           ],
           Text(
             text,
@@ -327,7 +410,7 @@ class _Badge extends StatelessWidget {
               color: Colors.white,
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
+              letterSpacing: 0.1,
             ),
           ),
         ],
@@ -350,11 +433,11 @@ class _FavoriteButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.92),
+          color: Colors.white.withValues(alpha: 0.94),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.10),
+              color: Colors.black.withValues(alpha: 0.14),
               blurRadius: 6,
             ),
           ],
@@ -385,11 +468,18 @@ class _PriceTag extends StatelessWidget {
     final theme = Theme.of(context);
 
     if (offer.isFree) {
-      return Text(
-        'Ücretsiz',
-        style: theme.textTheme.titleMedium?.copyWith(
-          color: AppColors.freeBadge,
-          fontWeight: FontWeight.w800,
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.freeBadge.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        ),
+        child: Text(
+          'Ücretsiz',
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: AppColors.freeBadge,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       );
     }
@@ -405,7 +495,7 @@ class _PriceTag extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(width: 5),
+          const SizedBox(width: 4),
         ],
         Text(
           '${offer.price.toStringAsFixed(0)}₺',

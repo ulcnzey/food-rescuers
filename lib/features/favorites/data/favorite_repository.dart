@@ -31,4 +31,13 @@ class FavoriteRepository {
         .map((e) => FavoriteBusiness.fromMap(e as Map<String, dynamic>))
         .toList();
   }
+  /// Bildirim tercihini tersine cevirir. Sonuc: yeni durum.
+  Future<bool> toggleNotify(String businessId) async {
+    final result = await _client.rpc(
+      'toggle_favorite_notify',
+      params: {'p_business_id': businessId},
+    );
+
+    return result as bool;
+  }
 }

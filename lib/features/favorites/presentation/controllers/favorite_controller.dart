@@ -57,3 +57,26 @@ final myFavoritesProvider = FutureProvider<List<FavoriteBusiness>>((ref) async {
   ref.watch(favoriteIdsProvider);
   return ref.watch(favoriteRepositoryProvider).fetchAll();
 });
+/// Favori bildirim tercihini yonetir.
+final favoriteNotifyControllerProvider = Provider<FavoriteNotifyController>(
+  (ref) => FavoriteNotifyController(
+    ref.watch(favoriteRepositoryProvider),
+    ref,
+  ),
+);
+
+class FavoriteNotifyController {
+  FavoriteNotifyController(this._repo, this._ref);
+
+  final FavoriteRepository _repo;
+  final Ref _ref;
+
+  Future<void> toggle(String businessId) async {
+    try {
+      await _repo.toggleNotify(businessId);
+      _ref.invalidate(myFavoritesProvider);
+    } catch (_) {
+      // Tercih degistirilemedi, sessizce gec.
+    }
+  }
+}

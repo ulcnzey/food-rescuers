@@ -15,6 +15,7 @@ class FavoriteBusiness {
     this.longitude,
     this.activeOfferCount = 0,
     this.minPrice,
+    this.notify = true,
   });
 
   final String businessId;
@@ -33,6 +34,9 @@ class FavoriteBusiness {
 
   /// Aktif ilanlar icindeki en dusuk fiyat.
   final double? minPrice;
+
+  /// Bu isletme yeni ilan verdiginde bildirim gonderilsin mi.
+  final bool notify;
 
   bool get hasActiveOffers => activeOfferCount > 0;
   bool get isIndividual => providerType == ProviderType.individual;
@@ -65,6 +69,7 @@ class FavoriteBusiness {
       longitude: (map['lng'] as num?)?.toDouble(),
       activeOfferCount: (map['active_offer_count'] as int?) ?? 0,
       minPrice: (map['min_price'] as num?)?.toDouble(),
+      notify: (map['notify'] as bool?) ?? true,
     );
   }
 }
