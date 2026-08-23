@@ -7,6 +7,7 @@ import '../../../../core/providers/supabase_providers.dart';
 import '../../../offers/presentation/controllers/offer_controller.dart';
 import '../../data/business_repository.dart';
 import '../../domain/entities/business.dart';
+import '../../domain/entities/business_stats.dart';
 
 final businessRepositoryProvider = Provider<BusinessRepository>((ref) {
   return BusinessRepository(ref.watch(supabaseProvider));
@@ -16,6 +17,12 @@ final businessRepositoryProvider = Provider<BusinessRepository>((ref) {
 final myBusinessProvider = FutureProvider<Business?>((ref) async {
   ref.watch(authStateProvider);
   return ref.watch(businessRepositoryProvider).fetchMyBusiness();
+});
+
+/// Isletme panelinin gunluk ozeti.
+final businessStatsProvider = FutureProvider<BusinessStats>((ref) async {
+  ref.watch(authStateProvider);
+  return ref.watch(businessRepositoryProvider).fetchStats();
 });
 
 /// Kullanici ilan verebiliyor mu (isletmesi var mi).
@@ -74,8 +81,8 @@ class BusinessController extends StateNotifier<BusinessUiState> {
         logoUrl: logoUrl,
       );
 
-      // Isletme olustu, onbellegi tazele.
       _ref.invalidate(myBusinessProvider);
+      _ref.invalidate(businessStatsProvider);
 
       state = const BusinessUiState();
       return true;

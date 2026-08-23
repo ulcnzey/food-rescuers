@@ -40,6 +40,8 @@ class Reservation {
     this.businessLng,
     this.pickupStart,
     this.completedAt,
+    this.hasReview = false,
+    this.myRating,
   });
 
   final String id;
@@ -69,6 +71,12 @@ class Reservation {
   final DateTime pickupEnd;
   final DateTime createdAt;
   final DateTime? completedAt;
+
+  /// Kullanici bu siparise yorum yapmis mi.
+  final bool hasReview;
+
+  /// Yapmissa kac yildiz vermis.
+  final int? myRating;
 
   bool get isFree => totalPrice == 0;
 
@@ -141,6 +149,8 @@ class Reservation {
       pickupEnd: _parse(map['pickup_end']) ?? DateTime.now(),
       createdAt: _parse(map['created_at']) ?? DateTime.now(),
       completedAt: _parse(map['completed_at']),
+      hasReview: (map['has_review'] as bool?) ?? false,
+      myRating: map['my_rating'] as int?,
     );
   }
 

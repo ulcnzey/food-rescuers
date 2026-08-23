@@ -8,8 +8,18 @@ class HomeRepository {
 
   final SupabaseClient _client;
 
+  /// Kullanici tarafi bannerlari.
   Future<List<BannerItem>> fetchBanners() async {
     final rows = await _client.rpc('active_banners') as List<dynamic>;
+    return rows
+        .map((e) => BannerItem.fromMap(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Isletme paneli bannerlari. Ayri tabloda tutuluyor,
+  /// boylece iki taraf birbirini etkilemeden yonetilebiliyor.
+  Future<List<BannerItem>> fetchBusinessBanners() async {
+    final rows = await _client.rpc('active_business_banners') as List<dynamic>;
     return rows
         .map((e) => BannerItem.fromMap(e as Map<String, dynamic>))
         .toList();

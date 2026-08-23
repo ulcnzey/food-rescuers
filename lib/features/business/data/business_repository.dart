@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/entities/business.dart';
+import '../domain/entities/business_stats.dart';
 
 class BusinessRepository {
   BusinessRepository(this._client);
@@ -14,9 +15,14 @@ class BusinessRepository {
     return Business.fromMap(rows.first as Map<String, dynamic>);
   }
 
+  /// Isletme panelinin gunluk ozeti.
+  Future<BusinessStats> fetchStats() async {
+    final rows = await _client.rpc('business_dashboard_stats') as List<dynamic>;
+    if (rows.isEmpty) return const BusinessStats();
+    return BusinessStats.fromMap(rows.first as Map<String, dynamic>);
+  }
+
   /// Yeni isletme olusturur, olusan kaydin id'sini doner.
-  /// providerType 'individual' ise sadece ucretsiz ilan verilebilir;
-  /// bu kural veritabani tetikleyicisinde zorunlu kilinmistir.
   Future<String> createBusiness({
     required String name,
     required BusinessCategory category,
@@ -53,8 +59,7 @@ class BusinessRepository {
   }
 
   /// Isletme bilgilerini kismi gunceller.
-  /// Null gonderilen alanlar veritabaninda COALESCE ile korunur,
-  /// boylece istemci sadece degisen alanlari gondermek zorunda.
+  /// Null gonderilen alanlar veritabaninda COALESCE ile korunur.
   Future<void> updateMyBusiness({
     String? name,
     BusinessCategory? category,

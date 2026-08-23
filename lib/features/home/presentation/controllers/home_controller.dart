@@ -9,8 +9,14 @@ final homeRepositoryProvider = Provider<HomeRepository>((ref) {
   return HomeRepository(ref.watch(supabaseProvider));
 });
 
+/// Kullanici tarafi bannerlari.
 final bannersProvider = FutureProvider<List<BannerItem>>((ref) async {
   return ref.watch(homeRepositoryProvider).fetchBanners();
+});
+
+/// Isletme paneli bannerlari.
+final businessBannersProvider = FutureProvider<List<BannerItem>>((ref) async {
+  return ref.watch(homeRepositoryProvider).fetchBusinessBanners();
 });
 
 final savedLocationsProvider =

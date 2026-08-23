@@ -5,7 +5,11 @@ import '../../../../core/animations/app_animations.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../notifications/presentation/controllers/notification_controller.dart';
+import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../offers/presentation/widgets/food_type_style.dart';
+import '../../../reviews/presentation/screens/write_review_screen.dart';
+import '../../../reviews/presentation/widgets/star_rating.dart';
 import '../../domain/entities/reservation.dart';
 import '../controllers/reservation_controller.dart';
 import '../widgets/qr_ticket.dart';
@@ -21,84 +25,260 @@ class MyOrdersScreen extends ConsumerWidget {
     final async = ref.watch(myReservationsProvider);
 
     return Scaffold(
-      body: SafeArea(
-        child: async.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+      body: Column(
+        children: [
+          const _OrdersTopBar(),
 
-          error: (_, _) => EmptyState(
-            art: EmptyStateArt.noResults,
-            title: 'Siparişler yüklenemedi',
-            message: 'Bağlantını kontrol edip tekrar deneyebilirsin.',
-            actionLabel: 'Tekrar Dene',
-            onAction: () => ref.invalidate(myReservationsProvider),
+          Expanded(
+            child: async.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+
+              error: (_, _) => EmptyState(
+                art: EmptyStateArt.noResults,
+                title: 'Siparişler yüklenemedi',
+                message: 'Bağlantını kontrol edip tekrar deneyebilirsin.',
+                actionLabel: 'Tekrar Dene',
+                onAction: () => ref.invalidate(myReservationsProvider),
+              ),
+
+              data: (all) {
+                if (all.isEmpty) {
+                  return EmptyState(
+                    title: 'Henüz siparişin yok',
+                    message:
+                        'Bir fırsat rezerve ettiğinde siparişin ve QR kodun '
+                        'burada görünecek.',
+                    actionLabel: 'Fırsatları Keşfet',
+                    onAction: onDiscover,
+                  );
+                }
+
+                final active = all.where((r) => r.isActive).toList();
+                final past = all.where((r) => !r.isActive).toList();
+
+                // Degerlendirilmemis tamamlanmis siparis sayisi
+                final pendingReviews = past
+                    .where((r) =>
+                        r.status == ReservationStatus.completed &&
+                        !r.hasReview)
+                    .length;
+
+                return RefreshIndicator(
+                  onRefresh: () async =>
+                      ref.invalidate(myReservationsProvider),
+                  child: ListView(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    children: [
+                      if (pendingReviews > 0) ...[
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color:
+                                AppColors.secondary.withValues(alpha: 0.10),
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusLg),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 20,
+                                color: AppColors.secondary,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  '$pendingReviews siparişini henüz '
+                                  'değerlendirmedin.',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+
+                      if (active.isNotEmpty) ...[
+                        _SectionTitle(
+                          title: 'Aktif',
+                          count: active.length,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        ...active.asMap().entries.map(
+                              (e) => Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.lg,
+                                ),
+                                child: FadeSlideIn(
+                                  index: e.key,
+                                  child:
+                                      _ActiveOrderCard(reservation: e.value),
+                                ),
+                              ),
+                            ),
+                      ],
+
+                      if (past.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        _SectionTitle(
+                          title: 'Geçmiş',
+                          count: past.length,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        ...past.asMap().entries.map(
+                              (e) => Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.md,
+                                ),
+                                child: FadeSlideIn(
+                                  index: active.length + e.key,
+                                  child: _PastOrderTile(reservation: e.value),
+                                ),
+                              ),
+                            ),
+                      ],
+
+                      const SizedBox(height: AppSpacing.xxl),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
+        ],
+      ),
+    );
+  }
+}
 
-          data: (all) {
-            if (all.isEmpty) {
-              return EmptyState(
-                title: 'Henüz siparişin yok',
-                message: 'Bir fırsat rezerve ettiğinde siparişin ve QR kodun '
-                    'burada görünecek.',
-                actionLabel: 'Fırsatları Keşfet',
-                onAction: onDiscover,
-              );
-            }
+// ---------------------------------------------------------------- UST BASLIK
 
-            final active = all.where((r) => r.isActive).toList();
-            final past = all.where((r) => !r.isActive).toList();
+class _OrdersTopBar extends ConsumerWidget {
+  const _OrdersTopBar();
 
-            return RefreshIndicator(
-              onRefresh: () async => ref.invalidate(myReservationsProvider),
-              child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.md),
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unread = ref.watch(unreadCountProvider).valueOrNull ?? 0;
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.primary, AppColors.primaryDark],
+        ),
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(AppSpacing.radiusXl),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  Text('Siparişlerim', style: theme.textTheme.headlineSmall),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  if (active.isNotEmpty) ...[
-                    _SectionTitle(
-                      title: 'Aktif',
-                      count: active.length,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    ...active.asMap().entries.map(
-                          (e) => Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: AppSpacing.lg),
-                            child: FadeSlideIn(
-                              index: e.key,
-                              child: _ActiveOrderCard(reservation: e.value),
+                  const SizedBox(width: 40),
+                  Expanded(
+                    child: Center(
+                      child: RichText(
+                        text: const TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Food',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: -0.5,
+                              ),
                             ),
+                            TextSpan(
+                              text: 'Rescuers',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 40,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationsScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.notifications_none_rounded,
+                            color: Colors.white,
                           ),
                         ),
-                  ],
-
-                  if (past.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    _SectionTitle(
-                      title: 'Geçmiş',
-                      count: past.length,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    ...past.asMap().entries.map(
-                          (e) => Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: AppSpacing.sm),
-                            child: FadeSlideIn(
-                              index: active.length + e.key,
-                              child: _PastOrderTile(reservation: e.value),
+                        if (unread > 0)
+                          Positioned(
+                            right: 4,
+                            top: 4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 2,
+                              ),
+                              constraints: const BoxConstraints(minWidth: 18),
+                              decoration: BoxDecoration(
+                                color: AppColors.error,
+                                borderRadius: BorderRadius.circular(9),
+                                border: Border.all(
+                                  color: AppColors.primaryDark,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Text(
+                                unread > 9 ? '9+' : '$unread',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                  ],
-
-                  const SizedBox(height: AppSpacing.xxl),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            );
-          },
+              const SizedBox(height: AppSpacing.xs),
+              const Text(
+                'Siparişlerim',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -208,9 +388,9 @@ class _ActiveOrderCardState extends ConsumerState<_ActiveOrderCard> {
             horizontal: AppSpacing.md,
             vertical: 8,
           ),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: AppColors.primary,
-            borderRadius: const BorderRadius.vertical(
+            borderRadius: BorderRadius.vertical(
               top: Radius.circular(AppSpacing.radiusLg),
             ),
           ),
@@ -269,14 +449,14 @@ class _ActiveOrderCardState extends ConsumerState<_ActiveOrderCard> {
   }
 }
 
-/// Gecmis siparis: kompakt satir.
-class _PastOrderTile extends StatelessWidget {
+/// Gecmis siparis: kompakt satir + degerlendirme baglantisi.
+class _PastOrderTile extends ConsumerWidget {
   const _PastOrderTile({required this.reservation});
 
   final Reservation reservation;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final style = FoodTypeStyle.of(reservation.foodType);
 
@@ -286,83 +466,169 @@ class _PastOrderTile extends StatelessWidget {
       _ => theme.colorScheme.onSurfaceVariant,
     };
 
+    final canReview = reservation.status == ReservationStatus.completed;
+
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         border: Border.all(color: theme.colorScheme.outline),
       ),
-      child: Row(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: style.color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            ),
-            child: Icon(style.icon, size: 20, color: style.color),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
               children: [
-                Text(
-                  reservation.offerTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                Text(
-                  reservation.businessName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    child: reservation.offerImageUrl != null
+                        ? Image.network(
+                            reservation.offerImageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => _iconBox(style),
+                          )
+                        : _iconBox(style),
                   ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        reservation.offerTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        reservation.businessName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12),
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusPill),
+                      ),
+                      child: Text(
+                        reservation.isExpiredNow
+                            ? 'Süresi doldu'
+                            : reservation.status.displayName,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: statusColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      reservation.isFree
+                          ? 'Ücretsiz'
+                          : '${reservation.totalPrice.toStringAsFixed(0)}₺',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-                ),
-                child: Text(
-                  reservation.isExpiredNow
-                      ? 'Süresi doldu'
-                      : reservation.status.displayName,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
+
+          // ---- Degerlendirme satiri
+          if (canReview) ...[
+            Divider(height: 1, color: theme.colorScheme.outline),
+            InkWell(
+              onTap: () async {
+                await Navigator.of(context).push(
+                  SmoothPageRoute<bool>(
+                    page: WriteReviewScreen(reservation: reservation),
                   ),
+                );
+                ref.invalidate(myReservationsProvider);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    if (reservation.hasReview) ...[
+                      StarRating(
+                        rating: (reservation.myRating ?? 0).toDouble(),
+                        size: 15,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        'Değerlendirdin',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Düzenle',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ] else ...[
+                      const Icon(
+                        Icons.star_outline_rounded,
+                        size: 18,
+                        color: AppColors.secondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Bu deneyimi değerlendir',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.secondary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                    ],
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                reservation.isFree
-                    ? 'Ücretsiz'
-                    : '${reservation.totalPrice.toStringAsFixed(0)}₺',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );
   }
+
+  Widget _iconBox(FoodTypeStyle style) => DecoratedBox(
+        decoration: BoxDecoration(color: style.color.withValues(alpha: 0.12)),
+        child: Center(child: Icon(style.icon, size: 20, color: style.color)),
+      );
 }

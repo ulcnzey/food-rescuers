@@ -5,13 +5,15 @@ import '../../../../core/animations/app_animations.dart';
 import '../../../../core/providers/location_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-
+import '../../../../core/utils/walking_time.dart';
+import '../../../favorites/presentation/controllers/favorite_controller.dart';
 import '../../../reservations/presentation/controllers/reservation_controller.dart';
 import '../../../reservations/presentation/screens/reservation_success_screen.dart';
+import '../../../reviews/presentation/screens/business_reviews_screen.dart';
+import '../../../reviews/presentation/widgets/star_rating.dart';
 import '../../domain/entities/offer_detail.dart';
 import '../controllers/offer_controller.dart';
 import '../widgets/food_type_style.dart';
-import '../../../favorites/presentation/controllers/favorite_controller.dart';
 
 class OfferDetailScreen extends ConsumerStatefulWidget {
   const OfferDetailScreen({super.key, required this.offerId});
@@ -41,16 +43,12 @@ class _OfferDetailScreenState extends ConsumerState<OfferDetailScreen> {
       final error = ref.read(reservationControllerProvider).errorMessage;
       if (error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error),
-            backgroundColor: AppColors.error,
-          ),
+          SnackBar(content: Text(error), backgroundColor: AppColors.error),
         );
       }
       return;
     }
 
-    // Basarili: kutlama ekranina gec, detay ekranini gecmisten cikar.
     Navigator.of(context).pushReplacement(
       SmoothPageRoute<void>(
         page: ReservationSuccessScreen(reservation: reservation),
@@ -206,15 +204,15 @@ class _Content extends ConsumerWidget {
     final theme = Theme.of(context);
     final style = FoodTypeStyle.of(offer.foodType);
     final state = ref.watch(reservationControllerProvider);
-    final isFavorite = ref.watch(favoriteIdsProvider).contains(offer.businessId);
+    final isFavorite =
+        ref.watch(favoriteIdsProvider).contains(offer.businessId);
 
     return Stack(
       children: [
         CustomScrollView(
           slivers: [
-            // ---- Gorsel basligi
             SliverAppBar(
-              expandedHeight: 260,
+              expandedHeight: 270,
               pinned: true,
               backgroundColor: theme.colorScheme.surface,
               leading: _CircleButton(
@@ -259,23 +257,24 @@ class _Content extends ConsumerWidget {
                       ],
                     ),
 
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.md),
 
                     // ---- Isletme satiri
                     Row(
                       children: [
                         Container(
-                          width: 32,
-                          height: 32,
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
                             color: style.color.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusMd),
                           ),
                           child: Icon(
                             offer.isIndividualProvider
                                 ? Icons.volunteer_activism_rounded
                                 : Icons.storefront_rounded,
-                            size: 17,
+                            size: 20,
                             color: style.color,
                           ),
                         ),
@@ -289,7 +288,7 @@ class _Content extends ConsumerWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.titleSmall
-                                    ?.copyWith(fontWeight: FontWeight.w700),
+                                    ?.copyWith(fontWeight: FontWeight.w800),
                               ),
                               if (offer.isIndividualProvider)
                                 Text(
@@ -301,26 +300,57 @@ class _Content extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        if (offer.businessRatingCount > 0) ...[
-                          const Icon(
-                            Icons.star_rounded,
-                            size: 18,
-                            color: AppColors.secondary,
+                        if (offer.businessRatingCount > 0)
+                          RatingBadge(
+                            rating: offer.businessRating,
+                            count: offer.businessRatingCount,
                           ),
-                          const SizedBox(width: 2),
-                          Text(
-                            offer.businessRating.toStringAsFixed(1),
-                            style: theme.textTheme.titleSmall,
-                          ),
-                          Text(
-                            ' (${offer.businessRatingCount})',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
+
+                    // ---- Yorumlari gor
+                    if (offer.businessRatingCount > 0) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            SmoothPageRoute<void>(
+                              page: BusinessReviewsScreen(
+                                businessId: offer.businessId,
+                                businessName: offer.businessName,
+                              ),
+                            ),
+                          );
+                        },
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusMd),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.rate_review_outlined,
+                                size: 17,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${offer.businessRatingCount} değerlendirmeyi gör',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const Icon(
+                                Icons.chevron_right_rounded,
+                                size: 18,
+                                color: AppColors.primary,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
 
                     const SizedBox(height: AppSpacing.lg),
 
@@ -338,12 +368,18 @@ class _Content extends ConsumerWidget {
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: _InfoTile(
-                            icon: Icons.place_outlined,
+                            icon: Icons.directions_walk_rounded,
                             label: 'Mesafe',
-                            value: offer.distanceLabel.isEmpty
+                            value: offer.distanceKm == null
                                 ? '—'
-                                : offer.distanceLabel,
-                            sub: 'Yürüyerek',
+                                : (WalkingTime.isWalkable(offer.distanceKm!)
+                                    ? WalkingTime.label(offer.distanceKm!)
+                                    : offer.distanceLabel),
+                            sub: offer.distanceKm == null
+                                ? ''
+                                : (WalkingTime.isWalkable(offer.distanceKm!)
+                                    ? 'yürüyerek'
+                                    : offer.distanceLabel),
                           ),
                         ),
                       ],
@@ -351,7 +387,6 @@ class _Content extends ConsumerWidget {
 
                     const SizedBox(height: AppSpacing.lg),
 
-                    // ---- Stok gostergesi
                     _StockBar(offer: offer),
 
                     if (offer.description != null &&
@@ -371,7 +406,6 @@ class _Content extends ConsumerWidget {
 
                     const SizedBox(height: AppSpacing.lg),
 
-                    // ---- Adres
                     if (offer.businessAddress != null) ...[
                       Text(
                         'Nereden alacaksın?',
@@ -385,7 +419,8 @@ class _Content extends ConsumerWidget {
                           color: theme.colorScheme.surface,
                           borderRadius:
                               BorderRadius.circular(AppSpacing.radiusLg),
-                          border: Border.all(color: theme.colorScheme.outline),
+                          border:
+                              Border.all(color: theme.colorScheme.outline),
                         ),
                         child: Row(
                           children: [
@@ -406,7 +441,6 @@ class _Content extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.lg),
                     ],
 
-                    // ---- Odeme bilgisi
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
@@ -433,7 +467,6 @@ class _Content extends ConsumerWidget {
                       ),
                     ),
 
-                    // Alt butonun altinda kalmamasi icin bosluk
                     const SizedBox(height: 140),
                   ],
                 ),
@@ -442,7 +475,6 @@ class _Content extends ConsumerWidget {
           ],
         ),
 
-        // ---- Sabit alt cubuk
         Positioned(
           left: 0,
           right: 0,
@@ -483,7 +515,6 @@ class _HeroImage extends StatelessWidget {
         else
           _fallback(),
 
-        // Ust kisimda butonlarin okunabilmesi icin karartma
         const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -543,47 +574,6 @@ class _HeroImage extends StatelessWidget {
           ),
         ],
       );
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({
-    required this.text,
-    required this.color,
-    this.icon,
-  });
-
-  final String text;
-  final Color color;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: Colors.white),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _PriceBlock extends StatelessWidget {
@@ -841,8 +831,9 @@ class _StepButton extends StatelessWidget {
           child: Icon(
             icon,
             size: 20,
-            color:
-                enabled ? AppColors.primary : theme.colorScheme.onSurfaceVariant,
+            color: enabled
+                ? AppColors.primary
+                : theme.colorScheme.onSurfaceVariant,
           ),
         ),
       ),
@@ -884,14 +875,45 @@ class _CircleButton extends StatelessWidget {
             duration: const Duration(milliseconds: 220),
             transitionBuilder: (child, anim) =>
                 ScaleTransition(scale: anim, child: child),
-            child: Icon(
-              icon,
-              key: ValueKey(icon),
-              size: 20,
-              color: color,
-            ),
+            child: Icon(icon, key: ValueKey(icon), size: 20, color: color),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge({required this.text, required this.color, this.icon});
+
+  final String text;
+  final Color color;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: Colors.white),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
