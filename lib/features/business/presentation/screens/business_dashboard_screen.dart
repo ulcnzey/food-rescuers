@@ -16,6 +16,7 @@ import '../../../offers/presentation/screens/create_offer_screen.dart';
 import '../../domain/entities/business.dart';
 import '../../domain/entities/business_stats.dart';
 import '../controllers/business_controller.dart';
+import 'business_settings_screen.dart';
 import 'business_setup_screen.dart';
 import 'edit_business_screen.dart';
 import 'my_offers_screen.dart';
@@ -82,15 +83,12 @@ class _Dashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final stats = ref.watch(businessStatsProvider).valueOrNull ??
-        const BusinessStats();
+    final stats =
+        ref.watch(businessStatsProvider).valueOrNull ?? const BusinessStats();
 
     return Column(
       children: [
-        _BusinessTopBar(
-          greeting: _greeting(),
-          business: business,
-        ),
+        _BusinessTopBar(greeting: _greeting(), business: business),
 
         Expanded(
           child: RefreshIndicator(
@@ -213,9 +211,8 @@ class _Dashboard extends ConsumerWidget {
                   title: 'QR Kod Okut',
                   subtitle: 'Müşterinin teslimatını onayla',
                   color: AppColors.secondary,
-                  badge: stats.pendingPickups > 0
-                      ? '${stats.pendingPickups}'
-                      : null,
+                  badge:
+                      stats.pendingPickups > 0 ? '${stats.pendingPickups}' : null,
                   onTap: () => Navigator.of(context).push(
                     SmoothPageRoute<void>(page: const QrScannerScreen()),
                   ),
@@ -287,11 +284,11 @@ class _BusinessTopBar extends ConsumerWidget {
           ),
           child: Column(
             children: [
-              // ---- Marka + bildirim + geri
+              // ---- Geri + marka + bildirim/ayarlar
               Row(
                 children: [
                   SizedBox(
-                    width: 40,
+                    width: 88,
                     child: IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(
@@ -329,53 +326,68 @@ class _BusinessTopBar extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  SizedBox(
-                    width: 40,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const NotificationsScreen(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          IconButton(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationsScreen(),
+                              ),
+                            ),
+                            icon: const Icon(
+                              Icons.notifications_none_rounded,
+                              color: Colors.white,
                             ),
                           ),
-                          icon: const Icon(
-                            Icons.notifications_none_rounded,
-                            color: Colors.white,
+                          if (unread > 0)
+                            Positioned(
+                              right: 4,
+                              top: 4,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 2,
+                                ),
+                                constraints:
+                                    const BoxConstraints(minWidth: 18),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error,
+                                  borderRadius: BorderRadius.circular(9),
+                                  border: Border.all(
+                                    color: AppColors.primaryDark,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  unread > 9 ? '9+' : '$unread',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                BusinessSettingsScreen(business: business),
                           ),
                         ),
-                        if (unread > 0)
-                          Positioned(
-                            right: 4,
-                            top: 4,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 5,
-                                vertical: 2,
-                              ),
-                              constraints: const BoxConstraints(minWidth: 18),
-                              decoration: BoxDecoration(
-                                color: AppColors.error,
-                                borderRadius: BorderRadius.circular(9),
-                                border: Border.all(
-                                  color: AppColors.primaryDark,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Text(
-                                unread > 9 ? '9+' : '$unread',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                        icon: const Icon(
+                          Icons.settings_outlined,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -676,9 +688,7 @@ class _PendingBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.secondary.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          border: Border.all(
-            color: AppColors.secondary.withValues(alpha: 0.4),
-          ),
+          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.4)),
         ),
         child: Row(
           children: [
@@ -778,8 +788,7 @@ class _AiInsightCard extends StatelessWidget {
               ),
               const Spacer(),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.info.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
