@@ -6,7 +6,7 @@ import 'core/config/env.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
-
+import 'core/services/notification_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -16,6 +16,7 @@ Future<void> main() async {
     url: Env.supabaseUrl,
     publishableKey: Env.supabaseAnonKey,
   );
+    await NotificationService.instance.init();
 
   runApp(const ProviderScope(child: FoodRescuersApp()));
 }
