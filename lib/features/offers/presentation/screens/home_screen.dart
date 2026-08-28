@@ -13,14 +13,15 @@ import '../../../home/domain/entities/banner_item.dart';
 import '../../../home/presentation/controllers/home_controller.dart';
 import '../../../home/presentation/widgets/location_sheet.dart';
 import '../../../notifications/presentation/controllers/notification_controller.dart';
+import '../../../notifications/presentation/screens/notification_permission_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../domain/entities/offer.dart';
+import '../../domain/entities/offer_filter.dart';
 import '../controllers/offer_controller.dart';
 import '../widgets/food_type_style.dart';
 import '../widgets/offer_card.dart';
 import 'offer_detail_screen.dart';
-import '../../domain/entities/offer_filter.dart';
-import '../../../notifications/presentation/screens/notification_permission_screen.dart';
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -31,7 +32,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   FoodType? _selected;
 
-    @override
+  @override
   void initState() {
     super.initState();
 
@@ -39,7 +40,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ref.read(locationControllerProvider.notifier).resolveCurrent();
 
       // Ilk acilista bildirim izni sor. Daha once karar
-      // verilmisse ekran acilmaz.
+      // verilmisse ekran hic acilmaz.
       if (mounted) await maybeShowNotificationPrompt(context, ref);
     });
   }
@@ -55,6 +56,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // ---- Yesil ust baslik (sabit)
           _TopBar(
             locationLabel: locationState.location?.label,
+            locationAddress: locationState.location?.address,
+            isSaved: locationState.location?.isSaved ?? false,
             isLoadingLocation: locationState.isLoading,
           ),
 
@@ -131,10 +134,25 @@ class _TopBar extends ConsumerWidget {
   const _TopBar({
     required this.locationLabel,
     required this.isLoadingLocation,
+    this.locationAddress,
+    this.isSaved = false,
   });
 
   final String? locationLabel;
+  final String? locationAddress;
+  final bool isSaved;
   final bool isLoadingLocation;
+
+  /// Kayitli adres etiketine gore ikon secer.
+  static IconData _locationIcon(String? label, bool isSaved) {
+    if (!isSaved) return Icons.my_location_rounded;
+
+    final l = (label ?? '').toLowerCase();
+    if (l.contains('ev')) return Icons.home_rounded;
+    if (l.contains('iş') || l.contains('is')) return Icons.work_rounded;
+    if (l.contains('okul')) return Icons.school_rounded;
+    return Icons.place_rounded;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -257,7 +275,7 @@ class _TopBar extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.md,
-                    vertical: 12,
+                    vertical: 10,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -265,23 +283,40 @@ class _TopBar extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.place_rounded,
+                      Icon(
+                        _locationIcon(locationLabel, isSaved),
                         size: 20,
                         color: AppColors.primary,
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
-                        child: Text(
-                          isLoadingLocation
-                              ? 'Konum alınıyor...'
-                              : (locationLabel ?? 'Konum seç'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isLoadingLocation
+                                  ? 'Konum alınıyor...'
+                                  : (locationLabel ?? 'Konum seç'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (locationAddress != null &&
+                                locationAddress != locationLabel)
+                              Text(
+                                locationAddress!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 11,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       const Icon(
@@ -322,8 +357,7 @@ class _BannerCarouselState extends ConsumerState<_BannerCarousel> {
     super.dispose();
   }
 
-  /// Bannerlar kendiliginden doner; kullanici etkilesimi
-  /// oldugunda zamanlayici yeniden baslar.
+  /// Bannerlar kendiliginden doner.
   void _startAutoScroll(int count) {
     _timer?.cancel();
     if (count < 2) return;
@@ -331,9 +365,8 @@ class _BannerCarouselState extends ConsumerState<_BannerCarousel> {
     _timer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (!mounted || !_controller.hasClients) return;
 
-      final next = (_page + 1) % count;
       _controller.animateToPage(
-        next,
+        (_page + 1) % count,
         duration: const Duration(milliseconds: 550),
         curve: Curves.easeOutCubic,
       );

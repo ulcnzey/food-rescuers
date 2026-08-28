@@ -130,6 +130,9 @@ class _LocationSheet extends ConsumerWidget {
     final saved = ref.watch(savedLocationsProvider);
     final current = ref.watch(locationControllerProvider);
 
+    // Kayitli adres secili degilse "mevcut konum" vurgulanir.
+    final usingCurrent = !(current.location?.isSaved ?? false);
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -168,8 +171,10 @@ class _LocationSheet extends ConsumerWidget {
             _LocationTile(
               icon: Icons.my_location_rounded,
               title: 'Mevcut konumum',
-              subtitle: current.location?.label ?? 'GPS ile bul',
-              isSelected: true,
+              subtitle: usingCurrent
+                  ? (current.location?.label ?? 'GPS ile bul')
+                  : 'GPS ile bul',
+              isSelected: usingCurrent,
               onTap: () async {
                 Navigator.of(context).pop();
                 await ref
@@ -218,13 +223,17 @@ class _LocationSheet extends ConsumerWidget {
                           icon: loc.icon,
                           title: loc.label,
                           subtitle: loc.address ?? 'Kayıtlı konum',
+                          isSelected: !usingCurrent &&
+                              current.location?.label == loc.label,
                           onTap: () {
+                            // Kayitli adreste kullanicinin verdigi ad korunur.
                             ref
                                 .read(locationControllerProvider.notifier)
-                                .setManual(
-                                  loc.latitude,
-                                  loc.longitude,
-                                  loc.label,
+                                .setSavedLocation(
+                                  latitude: loc.latitude,
+                                  longitude: loc.longitude,
+                                  label: loc.label,
+                                  address: loc.address,
                                 );
                             Navigator.of(context).pop();
                           },
@@ -327,6 +336,12 @@ class _LocationTile extends StatelessWidget {
                   ],
                 ),
               ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
               if (onDelete != null)
                 IconButton(
                   onPressed: onDelete,

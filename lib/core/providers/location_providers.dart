@@ -12,17 +12,27 @@ final geocodingServiceProvider = Provider<GeocodingService>((ref) {
 });
 
 /// Kullanicinin secili konumu. Ilk acilista GPS'ten alinir,
-/// sonrasinda kullanici manuel degistirebilir.
+/// sonrasinda kayitli adreslerden veya haritadan degistirilebilir.
 class UserLocation {
   const UserLocation({
     required this.latitude,
     required this.longitude,
     this.label,
+    this.address,
+    this.isSaved = false,
   });
 
   final double latitude;
   final double longitude;
+
+  /// Gosterilecek ad: "Ev", "Is" veya cozumlenen semt.
   final String? label;
+
+  /// Tam adres. Kayitli konumlarda alt satirda gosterilir.
+  final String? address;
+
+  /// Kayitli adreslerden mi secildi. Ikon secimini etkiler.
+  final bool isSaved;
 }
 
 class LocationState {
@@ -42,6 +52,7 @@ class LocationController extends StateNotifier<LocationState> {
   final LocationService _service;
   final GeocodingService _geocoding;
 
+  /// GPS'ten mevcut konumu alir ve adres cozumler.
   Future<void> resolveCurrent() async {
     state = const LocationState(isLoading: true);
 
@@ -73,21 +84,49 @@ class LocationController extends StateNotifier<LocationState> {
         latitude: result.latitude!,
         longitude: result.longitude!,
         label: _shortLabel(address),
+        address: address,
       ),
     );
   }
 
+  /// Haritadan secilen konum. Etiket cozumlenen adresten gelir.
   void setManual(double lat, double lng, String label) {
     state = LocationState(
-      location: UserLocation(latitude: lat, longitude: lng, label: label),
+      location: UserLocation(
+        latitude: lat,
+        longitude: lng,
+        label: _shortLabel(label) ?? label,
+        address: label,
+      ),
+    );
+  }
+
+  /// Kayitli adres secildiginde etiketi korur.
+  /// GPS'ten gelen semt adi yerine kullanicinin verdigi ad gosterilir.
+  void setSavedLocation({
+    required double latitude,
+    required double longitude,
+    required String label,
+    String? address,
+  }) {
+    state = LocationState(
+      location: UserLocation(
+        latitude: latitude,
+        longitude: longitude,
+        label: label,
+        address: address,
+        isSaved: true,
+      ),
     );
   }
 
   /// "Cumhuriyet Mah., Merkez, Elazig" -> "Merkez, Elazig"
   static String? _shortLabel(String? full) {
-    if (full == null) return null;
+    if (full == null || full.trim().isEmpty) return null;
+
     final parts = full.split(',').map((e) => e.trim()).toList();
     if (parts.length <= 2) return full;
+
     return parts.sublist(parts.length - 2).join(', ');
   }
 }
