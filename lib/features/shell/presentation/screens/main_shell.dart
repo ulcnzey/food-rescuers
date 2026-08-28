@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../favorites/presentation/screens/favorites_screen.dart';
 import '../../../map/presentation/screens/map_screen.dart';
+import '../../../notifications/presentation/controllers/realtime_listener.dart'
+    as fr;
 import '../../../offers/presentation/screens/home_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
 import '../../../reservations/presentation/screens/my_orders_screen.dart';
@@ -37,61 +39,64 @@ class _MainShellState extends ConsumerState<MainShell> {
       const ProfileScreen(),
     ];
 
-    return Scaffold(
-      body: IndexedStack(index: _index, children: screens),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 14,
-              offset: const Offset(0, -3),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 62,
-            child: Row(
-              children: [
-                _NavItem(
-                  icon: Icons.explore_outlined,
-                  activeIcon: Icons.explore_rounded,
-                  label: 'Keşfet',
-                  active: _index == 0,
-                  onTap: () => setState(() => _index = 0),
-                ),
-                _NavItem(
-                  icon: Icons.map_outlined,
-                  activeIcon: Icons.map_rounded,
-                  label: 'Harita',
-                  active: _index == 1,
-                  onTap: () => setState(() => _index = 1),
-                ),
-                _NavItem(
-                  icon: Icons.favorite_border_rounded,
-                  activeIcon: Icons.favorite_rounded,
-                  label: 'Favoriler',
-                  active: _index == 2,
-                  onTap: () => setState(() => _index = 2),
-                ),
-                _NavItem(
-                  icon: Icons.receipt_long_outlined,
-                  activeIcon: Icons.receipt_long_rounded,
-                  label: 'Siparişlerim',
-                  active: _index == 3,
-                  onTap: () => setState(() => _index = 3),
-                ),
-                _NavItem(
-                  icon: Icons.person_outline_rounded,
-                  activeIcon: Icons.person_rounded,
-                  label: 'Hesabım',
-                  active: _index == 4,
-                  onTap: () => setState(() => _index = 4),
-                ),
-              ],
+    // Realtime dinleyici: yeni bildirim geldiginde cihazda gosterir.
+    return fr.NotificationListener(
+      child: Scaffold(
+        body: IndexedStack(index: _index, children: screens),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 14,
+                offset: const Offset(0, -3),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 62,
+              child: Row(
+                children: [
+                  _NavItem(
+                    icon: Icons.explore_outlined,
+                    activeIcon: Icons.explore_rounded,
+                    label: 'Keşfet',
+                    active: _index == 0,
+                    onTap: () => setState(() => _index = 0),
+                  ),
+                  _NavItem(
+                    icon: Icons.map_outlined,
+                    activeIcon: Icons.map_rounded,
+                    label: 'Harita',
+                    active: _index == 1,
+                    onTap: () => setState(() => _index = 1),
+                  ),
+                  _NavItem(
+                    icon: Icons.favorite_border_rounded,
+                    activeIcon: Icons.favorite_rounded,
+                    label: 'Favoriler',
+                    active: _index == 2,
+                    onTap: () => setState(() => _index = 2),
+                  ),
+                  _NavItem(
+                    icon: Icons.receipt_long_outlined,
+                    activeIcon: Icons.receipt_long_rounded,
+                    label: 'Siparişlerim',
+                    active: _index == 3,
+                    onTap: () => setState(() => _index = 3),
+                  ),
+                  _NavItem(
+                    icon: Icons.person_outline_rounded,
+                    activeIcon: Icons.person_rounded,
+                    label: 'Hesabım',
+                    active: _index == 4,
+                    onTap: () => setState(() => _index = 4),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -100,8 +105,8 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 }
 
-/// Alt menu ogesi. Secili sekmede ikon yukari kayar ve
-/// altinda kucuk bir gosterge cizgisi belirir.
+/// Alt menu ogesi. Secili sekmede ikonun ustunde kucuk bir
+/// gosterge cizgisi belirir.
 class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.icon,

@@ -20,7 +20,7 @@ import '../widgets/food_type_style.dart';
 import '../widgets/offer_card.dart';
 import 'offer_detail_screen.dart';
 import '../../domain/entities/offer_filter.dart';
-
+import '../../../notifications/presentation/screens/notification_permission_screen.dart';
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -31,11 +31,16 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   FoodType? _selected;
 
-  @override
+    @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       ref.read(locationControllerProvider.notifier).resolveCurrent();
+
+      // Ilk acilista bildirim izni sor. Daha once karar
+      // verilmisse ekran acilmaz.
+      if (mounted) await maybeShowNotificationPrompt(context, ref);
     });
   }
 

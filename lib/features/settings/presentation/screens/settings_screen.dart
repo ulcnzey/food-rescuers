@@ -9,6 +9,7 @@ import '../../../auth/presentation/screens/login_screen.dart';
 import 'faq_screen.dart';
 import 'static_page_screen.dart';
 import 'support_screen.dart';
+import '../../../notifications/presentation/controllers/notification_controller.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -58,6 +59,34 @@ class SettingsScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             const _GroupTitle('Uygulama'),
+                        Consumer(
+              builder: (context, ref, _) {
+                final pref =
+                    ref.watch(notificationPreferenceProvider).valueOrNull;
+                final enabled = pref?.enabled ?? false;
+
+                return _Tile(
+                  icon: enabled
+                      ? Icons.notifications_active_outlined
+                      : Icons.notifications_off_outlined,
+                  title: 'Bildirimler',
+                  trailing: Switch(
+                    value: enabled,
+                    activeThumbColor: AppColors.primary,
+                    onChanged: (v) async {
+                      final controller =
+                          ref.read(notificationPermissionProvider);
+                      if (v) {
+                        await controller.allow();
+                      } else {
+                        await controller.deny();
+                      }
+                    },
+                  ),
+                  onTap: () {},
+                );
+              },
+            ),
             _Tile(
               icon: Icons.brightness_6_outlined,
               title: 'Görünüm',
