@@ -137,9 +137,9 @@ flutter run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
 | Kimlik doğrulama & onboarding| ✅    |
 | Yetki tabanlı rol yönetimi   | ✅    |
 | Veritabanı şeması & fonksiyonlar | ✅ |
-| Keşfet ekranı                | 🔄    |
-| Harita görünümü              | 🔄    |
-| Teklif detayı & rezervasyon  | 🔄    |
+| Keşfet ekranı                |  ✅   |
+| Harita görünümü              | ✅    |
+| Teklif detayı & rezervasyon  | ✅    |
 | QR teslim fişi               | ⏳    |
 
 ---
